@@ -1,0 +1,17 @@
+{
+  "name": "chatskimmer",
+  "version": "1.0.0",
+  "description": "MChad Chat Skimmer",
+  "main": "test.js",
+  "scripts": {
+    "start": "node test.js"
+  },
+  "author": "MonMon Mnemonics",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "node-html-parser": "^3.3.5"
+  }
+}
