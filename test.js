@@ -359,7 +359,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting)
   }
 
   console.log("FETCHING AGAIN");
-  await new Promise(r => setTimeout(r, 3000));
+  await new Promise(r => setTimeout(r, 5000));
   StartYTCPoll(Key, ContTkn, VisDt, CVer, 0);
 }
 //=========================================  YTC SKIMMER  =========================================
@@ -370,42 +370,78 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting)
 async function BroadcastMessage(Msg){
   let s = "";
   Msg.content.forEach(dt => {
-    if (dt.indexOf("://yt3.ggpht.com/") == -1){
+    if (dt.indexOf("https://") == -1){
       s += dt + " ";
     }
   });
-  s = s.trimEnd();
-  s = s.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
 
-  var containsJapanese = s.match(/[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/g);
-
-  if (containsJapanese == null){
-    containsJapanese = false;
-  } else if (containsJapanese.length > s.length/4.0) {
-    containsJapanese = true;
-  } else {
-    containsJapanese = false;
+  //  SKIP IF THERE'S A TRANSLATION BRACKET
+  if (s.match(/\[.*\w\w.*\]|\(.*\w\w.*\)/) != null){
+    return;
   }
 
-  if (!containsJapanese && (s != "")){
-    console.log(s);
-    /*
-    const res = await axios.post("https://api-free.deepl.com/v2/translate",
-    querystring.stringify({
-      auth_key: DeepLAPI.APIkey,
-      text: s,
-      target_lang: 'JA',
-      split_sentences: 0
-    })
-    ).catch(e => e.response)
+  //  CANCEL IF THERE'S NO MORE THAN 3 CONSECUTIVE LETTERS
+  if (s.match(/\p{L}\p{L}\p{L}\p{L}+/u) == null){
+    return;
+  }
+
+  //  REMOVE EMOJIS
+  s = s.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '').trim();
+  let s2 = s.replace(/\s/g, '');
+
+  //  SKIP IF LESS THAN 3
+  if (s2.length < 4){
+    return;
+  }
   
-    if (res.status != 200){
-      console.log("ERROR DEEPLAPI");
-    } else {
-      console.log(s + "(" + res.data.translations[0].text + ")");
-    } 
-    */   
-  } 
+  //  CANCEL IF LESS THAN HALF IS JAPANESE CHARACTERS
+  if (s2.replace(/[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/g, '').length*4.0 < s2.length*3.0){
+    return;
+  }
+
+  s = s.trim();
+
+  //  REPLACE ALL THE REPEATING MORE THAN 3 TIMES
+  s2 = s.match(/(.+)\1{3,}/ug)
+  if (s2 != null){
+    s2.forEach(e => {
+      for (let dt = e[0], i = 0; dt.length != e.length; dt += e[++i]){
+        if (e.replace(new RegExp(dt.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'), '') == ""){
+          switch (dt.length) {
+            case 1:
+              s = s.replace(e, dt + dt + dt);
+              break;
+            case 2:
+              s = s.replace(e, dt + dt);
+              break;
+            default:
+              s = s.replace(e, dt);
+              break;
+          }
+          break;
+        }
+      }
+    });
+  }
+  console.log(s);
+
+  //  GET TRANSLATION
+  /*
+  const res = await axios.post("https://api-free.deepl.com/v2/translate",
+  querystring.stringify({
+    auth_key: DeepLAPI.APIkey,
+    text: s,
+    target_lang: 'JA',
+    split_sentences: 0
+  })
+  ).catch(e => e.response)
+
+  if (res.status != 200){
+    console.log("ERROR DEEPLAPI");
+  } else {
+    console.log(s + "(" + res.data.translations[0].text + ")");
+  }
+  */
 }
 
 app.get('/Skimmer', async function (req, res) {
