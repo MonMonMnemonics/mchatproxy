@@ -257,6 +257,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
       const idx = ActiveID.indexOf(vidID);
       if (idx != -1){
         FlushCloseConnectionsTL(idx);
+        FlushCloseConnectionsFilter(idx);
       }
     } else {
       await new Promise(r => setTimeout(r, 1000));
@@ -269,6 +270,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
     const idx = ActiveID.indexOf(vidID);
     if (idx != -1){
       FlushCloseConnectionsTL(idx);
+      FlushCloseConnectionsFilter(idx);
     }
     return;
   }
@@ -277,6 +279,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
     const idx = ActiveID.indexOf(vidID);
     if (idx != -1){
       FlushCloseConnectionsTL(idx);
+      FlushCloseConnectionsFilter(idx);
     }
     return;
   }
@@ -287,6 +290,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
     const idx = ActiveID.indexOf(vidID);
     if (idx != -1){
       FlushCloseConnectionsTL(idx);
+      FlushCloseConnectionsFilter(idx);
     }
     return;
   }
@@ -391,9 +395,18 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
     }
   }
 
+  //  FILTERING FUNCTION
+  broadcastFilter(ActiveID.indexOf(vidID), JSON.stringify(MsgChunk));
+
   // PREPARE FOR DEEPL TRANSLATION BOUNCER
   var TLContent = [];
   for (let i = 0; i < MsgChunk.length; i++) {
+    if (MsgChunk[i].type){
+      if(MsgChunk[i].type == 'MEMBER'){
+        return;
+      }
+    }    
+
     let s = "";
     MsgChunk[i].content.forEach(dt => {
       if (dt.indexOf("https://") == -1){
@@ -513,9 +526,6 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
   } else {
     broadcastTL(ActiveID.indexOf(vidID), JSON.stringify(MsgChunk));
   }
-
-  //  FILTERING FUNCTION
-  
 
   //  POLLING CALLER
   const idx = ActiveID.indexOf(vidID);
