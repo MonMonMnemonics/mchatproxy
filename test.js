@@ -298,12 +298,16 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
   var MsgChunk = [];
   if (res.data.continuationContents.liveChatContinuation.actions){
     for (const actionItem of res.data.continuationContents.liveChatContinuation.actions) {
-      if ("addChatItemAction" in actionItem) {
+      if ("markChatItemsByAuthorAsDeletedAction" in actionItem) {
+        const CID = actionItem.markChatItemsByAuthorAsDeletedAction.externalChannelId;
+        BroadcastDelete(CID, vidID);
+      } else if ("addChatItemAction" in actionItem) {
         const item = actionItem.addChatItemAction.item;
         if ("liveChatTextMessageRenderer" in item) {
           //------------------------------------------ NORMAL MESSAGE ------------------------------------------
           var MessageContent = [];
           var BadgeContent = [];
+          var Mod = 0;
 
           if(item.liveChatTextMessageRenderer.message){
             MessageContent = item.liveChatTextMessageRenderer.message.runs.map(dt => {
@@ -318,32 +322,51 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
           }
 
           if (item.liveChatTextMessageRenderer.authorBadges){
+            var test = JSON.stringify(item.liveChatTextMessageRenderer.authorBadges).match(/\"tooltip\":\"Moderator\"|\"tooltip\":\"Owner\"|Member/);
+            if(test != null){
+              switch (test[0]) {
+                case '"tooltip":"Owner"':
+                  Mod = 3;
+                  break;
+
+                case '"tooltip":"Moderator"':
+                  Mod = 2;
+                  break;
+                
+                case 'Member':
+                  Mod = 1;
+                  break;
+              }
+            }
             item.liveChatTextMessageRenderer.authorBadges.map(dt => {
               var thumbnailurl = Object.keys(dt.liveChatAuthorBadgeRenderer);
               for(let i = 0; i < thumbnailurl.length; i++){
                 if (thumbnailurl[i].toLowerCase().indexOf("thumbnail") != -1){
                   thumbnailurl = dt.liveChatAuthorBadgeRenderer[thumbnailurl[i]].thumbnails;
                   BadgeContent.push({
-                    Thumbnail: thumbnailurl[thumbnailurl.length - 1].url
+                    Thumbnail: thumbnailurl[thumbnailurl.length - 1].url,
+                    type: dt.liveChatAuthorBadgeRenderer.tooltip
                   });
-                  /*
-                  BadgeContent.push({
-                    Title: dt.liveChatAuthorBadgeRenderer.tooltip,
-                    Thumbnail: thumbnailurl[thumbnailurl.length - 1].url
-                  });
-                  */
                   break;
                 }
               }
             });
           }
+          
+          var Msgpush = {};
+          Msgpush.author = item.liveChatTextMessageRenderer.authorName.simpleText;
+          Msgpush.authorPhoto = item.liveChatTextMessageRenderer.authorPhoto.thumbnails[item.liveChatTextMessageRenderer.authorPhoto.thumbnails.length - 1].url;
+          Msgpush.content = MessageContent;
 
-          MsgChunk.push({
-            author: item.liveChatTextMessageRenderer.authorName.simpleText,
-            authorPhoto: item.liveChatTextMessageRenderer.authorPhoto.thumbnails[item.liveChatTextMessageRenderer.authorPhoto.thumbnails.length - 1].url,
-            badgeContent: BadgeContent,
-            content: MessageContent
-          });
+          if (BadgeContent.length != 0){
+            Msgpush.badgeContent = BadgeContent;
+          } 
+
+          if (Mod != 0){
+            Msgpush.Mod = Mod;
+          }
+
+          MsgChunk.push(Msgpush);  
         } else if ("liveChatPaidMessageRenderer" in item) {
           //------------------------------------------ SC MESSAGE ------------------------------------------
           var MessageContent = [];
@@ -364,7 +387,8 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
             authorPhoto: item.liveChatPaidMessageRenderer.authorPhoto.thumbnails[item.liveChatPaidMessageRenderer.authorPhoto.thumbnails.length - 1].url,
             type: "SC",
             SC: item.liveChatPaidMessageRenderer.purchaseAmountText.simpleText,
-            content: MessageContent
+            content: MessageContent,
+            BC: "#" + parseInt(item.liveChatPaidMessageRenderer.bodyBackgroundColor).toString(16).substring(2).toUpperCase()
           });
         } else if ("liveChatMembershipItemRenderer" in item) {
           //------------------------------------------ MEMBER MESSAGE ------------------------------------------
@@ -387,7 +411,17 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
             type: "MEMBER",
             content: MessageContent
           });
-        } else {
+        } else if ("liveChatPaidStickerRenderer" in item) {
+          //------------------------------------------ PAID STICKER MESSAGE ------------------------------------------
+          MsgChunk.push({
+            author: item.liveChatPaidStickerRenderer.authorName.simpleText,
+            authorPhoto: item.liveChatPaidStickerRenderer.authorPhoto.thumbnails[item.liveChatPaidMessageRenderer.authorPhoto.thumbnails.length - 1].url,
+            type: "SCS",
+            SC: item.liveChatPaidStickerRenderer.purchaseAmountText.simpleText,
+            content: ["https:" + item.liveChatPaidStickerRenderer.sticker.thumbnails[item.liveChatPaidStickerRenderer.sticker.thumbnails.length - 1].url],
+            BC: "#" + parseInt(item.liveChatPaidStickerRenderer.backgroundColor).toString(16).substring(2).toUpperCase()
+          });
+        }else {
           //------------------------------------------ MISC MESSAGE ------------------------------------------
         }
       } else if ("addLiveChatTickerItemAction" in actionItem) {
@@ -401,92 +435,106 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
   // PREPARE FOR DEEPL TRANSLATION BOUNCER
   var TLContent = [];
   for (let i = 0; i < MsgChunk.length; i++) {
-    if (MsgChunk[i].type){
-      if(MsgChunk[i].type == 'MEMBER'){
-        return;
-      }
-    }    
-
-    let s = "";
-    MsgChunk[i].content.forEach(dt => {
-      if (dt.indexOf("https://") == -1){
-        s += dt + " ";
-      }
-    });
-  
-    //  SKIP IF THERE'S A TRANSLATION BRACKET
-    if (s.match(/\[.*\w\w.*\]|\(.*\w\w.*\)/) != null){
-      continue;
-    }
-  
-    //  CANCEL IF THERE'S NO MORE THAN 3 CONSECUTIVE LETTERS
-    if (s.match(/\p{L}\p{L}\p{L}\p{L}+/u) == null){
-      continue;
-    }
-  
-    //  REMOVE EMOJIS
-    s = s.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '').trim();
-    let s2 = s.replace(/\s/g, '');
-  
-    //  SKIP IF LESS THAN 3
-    if (s2.length < 4){
-      continue;
-    }
-    
-    //  CANCEL IF LESS THAN HALF IS JAPANESE CHARACTERS
-    if (s2.replace(/[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/g, '').length*4.0 < s2.length*3.0){
-      continue;
-    }
-  
-    s = s.trim();
-  
-    //  REPLACE ALL THE REPEATING MORE THAN 3 TIMES
-    s2 = s.match(/(.+)\1{3,}/ug)
-    if (s2 != null){
-      s2.forEach(e => {
-        for (let dt = e[0], i = 0; dt.length != e.length; dt += e[++i]){
-          if (e.replace(new RegExp(dt.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'), '') == ""){
-            switch (dt.length) {
-              case 1:
-                s = s.replace(e, dt + dt + dt);
-                break;
-              case 2:
-                s = s.replace(e, dt + dt);
-                break;
-              default:
-                s = s.replace(e, dt);
-                break;
-            }
-            break;
-          }
+    if (MsgChunk[i].type != 'MEMBER'){
+      let s = "";
+      MsgChunk[i].content.forEach(dt => {
+        if (dt.indexOf("https://") == -1){
+          s += dt + " ";
         }
       });
-    }
+      
+      switch (s.toLowerCase()) {
+        case "lol":
+          MsgChunk[i].TL = "草";
+          continue;
+  
+        case "lmao":
+          MsgChunk[i].TL = "大草原";
+          continue;
+  
+        case "rofl":
+          MsgChunk[i].TL = "天まで広がる大草原";
+          continue;
+      }
 
-    switch (s.toLowerCase()) {
-      case "lol":
-        MsgChunk[i].TL = "草";
-        break;
-
-      case "lmao":
-        MsgChunk[i].TL = "大草原";
-        break;
-
-      case "rofl":
-        MsgChunk[i].TL = "大草原";
-        break;
-        
-      default:
-        MsgChunk[i].TL = "ok";
-        TLContent.push(s);
-        break;
-    }
+      if (s.length < 16){
+        continue;
+      }
+    
+      //  SKIP IF THERE'S A TRANSLATION BRACKET
+      if (s.match(/\[.*\w\w.*\]|\(.*\w\w.*\)/) != null){
+        continue;
+      }
+    
+      //  CANCEL IF THERE'S NO MORE THAN 3 CONSECUTIVE LETTERS
+      if (s.match(/\p{L}\p{L}\p{L}\p{L}+/u) == null){
+        continue;
+      }
+    
+      //  REMOVE EMOJIS
+      s = s.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '').trim();
+      let s2 = s.replace(/\s/g, '');
+    
+      //  SKIP IF LESS THAN 3
+      if (s2.length < 4){
+        continue;
+      }
+      
+      //  CANCEL IF LESS THAN HALF IS JAPANESE CHARACTERS
+      if (s2.replace(/[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/g, '').length*4.0 < s2.length*3.0){
+        continue;
+      }
+    
+      s = s.trim();
+    
+      //  REPLACE ALL THE REPEATING MORE THAN 3 TIMES
+      s2 = s.match(/(.+)\1{3,}/ug)
+      if (s2 != null){
+        s2.forEach(e => {
+          for (let dt = e[0], i = 0; dt.length != e.length; dt += e[++i]){
+            if (e.replace(new RegExp(dt.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'), '') == ""){
+              switch (dt.length) {
+                case 1:
+                  s = s.replace(e, dt + dt + dt);
+                  break;
+                case 2:
+                  s = s.replace(e, dt + dt);
+                  break;
+                default:
+                  s = s.replace(e, dt);
+                  break;
+              }
+              break;
+            }
+          }
+        });
+      }
+  
+      switch (s.toLowerCase()) {
+        case "lol":
+          MsgChunk[i].TL = "草";
+          break;
+  
+        case "lmao":
+          MsgChunk[i].TL = "大草原";
+          break;
+  
+        case "rofl":
+          MsgChunk[i].TL = "天まで広がる大草原";
+          break;
+          
+        default:
+          MsgChunk[i].TL = "ok";
+          TLContent.push(s);
+          break;
+      }
+    } 
   }
 
   //  GET TRANSLATION
   if (TLContent.length != 0){
     broadcastTL(ActiveID.indexOf(vidID), JSON.stringify(MsgChunk));
-    
+
     /*
     if (TLOpen){
       var textlist = "";
@@ -540,6 +588,37 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
       StartYTCPoll(Key, ContTkn, VisDt, CVer, 0, ProxySetting, vidID);
     }
   } 
+}
+
+async function BroadcastDelete(CID, VID){
+  if (CID != undefined){    
+    //UCmRd9ZiaD41vCqfJ3K5JrpQ meta itemprop="name"
+    var res = await axios.get("https://www.youtube.com/channel/" + CID, {headers: head});
+    let idx = res.data.indexOf('<meta itemprop="name"');
+    
+    if (idx == -1) {
+      return;
+    }
+
+    idx = res.data.indexOf('content="', idx);
+    if (idx == -1) {
+      return(400);
+    }
+    idx += ('content="').length;
+    let text = res.data.substr(idx, res.data.indexOf('">', idx) - idx);
+
+    idx = ActiveID.indexOf(VID);
+    if (idx != -1){
+      TLConnList[idx].forEach(c => {
+        c.res.write("data: { \"flag\":\"DELETE\", \"Nick\":\"" + text + "\"}\n\n");
+        c.res.flush();
+      })
+      FilterConnList[idx].forEach(c => {
+        c.res.write("data: { \"flag\":\"DELETE\", \"Nick\":\"" + text + "\"}\n\n");
+        c.res.flush();
+      })
+    }
+  }
 }
 //=========================================  YTC SKIMMER  =========================================
 
@@ -744,7 +823,7 @@ app.get('/AutoTL', async function (req, res) {
   AddListenerTL(res, req, req.query.vidID);
 })
 
-app.get('/TLFilter', async function (req, res) {
+app.get('/PureProxy', async function (req, res) {
   if (!req.query.vidID)  {
     return res.status(400).send("NO VID ID");
   }
