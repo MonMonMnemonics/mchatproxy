@@ -816,24 +816,63 @@ function PingerFilter() {
 //-----------------------------------------  SERVER HANDLER  -----------------------------------------
 //app.get('/Skimmer', cors(corsOptions), async function (req, res) {
 app.get('/AutoTL', async function (req, res) {
-  if (!req.query.vidID)  {
-    return res.status(400).send("NO VID ID");
+  if (req.query.vidID) {
+    AddListenerTL(res, req, req.query.vidID);    
+  } else if (req.query.ChannelID) {
+    var res2 = await axios.get("https://www.youtube.com/channel/" + req.query.ChannelID + "/live", {headers: head});
+    let idx = res2.data.indexOf('"liveStreamabilityRenderer":{"videoId":"');
+  
+    if (idx == -1){
+      return res.status(400).send("NOT LIVE");
+    }
+    idx += ('"liveStreamabilityRenderer":{"videoId":"').length;
+  
+    let vidID = res2.data.substring(idx, res2.data.indexOf('","', idx));
+    AddListenerTL(res, req, vidID);
+  } else {
+    return res.status(400).send("NO ID TO STREAM");
   }
-
-  AddListenerTL(res, req, req.query.vidID);
 })
 
 app.get('/PureProxy', async function (req, res) {
-  if (!req.query.vidID)  {
-    return res.status(400).send("NO VID ID");
+  if (req.query.vidID) {
+    AddListenerFilter(res, req, req.query.vidID, "");
+  } else if (req.query.ChannelID) {
+    var res2 = await axios.get("https://www.youtube.com/channel/" + req.query.ChannelID + "/live", {headers: head});
+    let idx = res2.data.indexOf('"liveStreamabilityRenderer":{"videoId":"');
+  
+    if (idx == -1){
+      return res.status(400).send("NOT LIVE");
+    }
+    idx += ('"liveStreamabilityRenderer":{"videoId":"').length;
+  
+    let vidID = res2.data.substring(idx, res2.data.indexOf('","', idx));
+    AddListenerFilter(res, req, vidID, "");
+  } else {
+    return res.status(400).send("NO ID TO STREAM");
+  }
+})
+
+app.get('/ChannelLive', async function (req,res) {
+  if (!req.query.ChannelID) {
+    return res.status(400).send("NO CHANNEL ID");
   }
 
-  AddListenerFilter(res, req, req.query.vidID, "");
+  var res2 = await axios.get("https://www.youtube.com/channel/" + req.query.ChannelID + "/live", {headers: head});
+  let idx = res2.data.indexOf('"liveStreamabilityRenderer":{"videoId":"');
+
+  if (idx == -1){
+    return res.status(400).send("NOT LIVE");
+  }
+  idx += ('"liveStreamabilityRenderer":{"videoId":"').length;
+
+  let vidID = res2.data.substring(idx, res2.data.indexOf('","', idx));
+  return res.status(200).send(vidID);  
 })
 
 app.listen(PORT, async function () {
-  setInterval(PingerTL, 1000*10);
-  setInterval(PingerFilter, 1000*10);
-  setInterval( () => {TLOpen = true;}, 1000*3600*24);
+  //setInterval(PingerTL, 1000*10);
+  //setInterval(PingerFilter, 1000*10);
+  //setInterval( () => {TLOpen = true;}, 1000*3600*24);
   console.log(`Server initialized on port ${PORT}`);
 })
