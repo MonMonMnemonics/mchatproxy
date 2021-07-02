@@ -816,8 +816,8 @@ function PingerFilter() {
 //-----------------------------------------  SERVER HANDLER  -----------------------------------------
 //app.get('/Skimmer', cors(corsOptions), async function (req, res) {
 app.get('/AutoTL', async function (req, res) {
-  if (req.query.vidID) {
-    AddListenerTL(res, req, req.query.vidID);    
+  if (req.query.VidID) {
+    AddListenerTL(res, req, req.query.VidID);    
   } else if (req.query.ChannelID) {
     var res2 = await axios.get("https://www.youtube.com/channel/" + req.query.ChannelID + "/live", {headers: head});
     let idx = res2.data.indexOf('"liveStreamabilityRenderer":{"videoId":"');
@@ -835,8 +835,8 @@ app.get('/AutoTL', async function (req, res) {
 })
 
 app.get('/PureProxy', async function (req, res) {
-  if (req.query.vidID) {
-    AddListenerFilter(res, req, req.query.vidID, "");
+  if (req.query.VidID) {
+    AddListenerFilter(res, req, req.query.VidID, "");
   } else if (req.query.ChannelID) {
     var res2 = await axios.get("https://www.youtube.com/channel/" + req.query.ChannelID + "/live", {headers: head});
     let idx = res2.data.indexOf('"liveStreamabilityRenderer":{"videoId":"');
