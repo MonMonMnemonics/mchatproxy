@@ -180,27 +180,7 @@ Action item
 */
 
 const axios = require('axios');
-const parse = require('node-html-parser');
-const express = require("express")
-const cors = require('cors')
-const bodyParser = require("body-parser")
-const querystring = require('querystring');
-const compression = require('compression');
-
-const DeepLAPI = require("./DeepL.json");
-const fs = require('fs')
-
-const PORT = process.env.PORT || 31023
-const app = express()
-app.use(bodyParser.json( { limit: '20mb'} ))
-app.use(bodyParser.urlencoded({ extended: true, limit: '20mb' }))
-app.use(cors());
-app.use(compression());
-
-var corsOptions = {
-  origin: 'https://mchatx.org',
-  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
-}
+const DeepLAPI = require("../DeepL.json");
 
 const head = {'user-agent': 'Mozilla5.0 (Windows NT 10.0; Win64; x64) AppleWebKit537.36 (KHTML, like Gecko) Chrome75.0.3770.142 Safari537.36'}    
 
@@ -214,12 +194,12 @@ const Contheaders = {
 };
 
 const ReservedChannel = [
-  'UCxvlgkpP5z98LsRudHN_Ucg', //  NEKOBOSHI MINTO
-  'UCDqI2jOz0weumE8s7paEk6g', //  ROBOCO
-  'UCp-5t9SrOQwXMU7iIjQfARg', //  OOKAMI MIO
-  'UCp6993wxpyDPHUpavwDFqgg', //  TOKINO SORA
-  'UCFTLzh12_nrtzqBPsTCqenA'  //  AKI ROSENTHAL
-]
+    'UCxvlgkpP5z98LsRudHN_Ucg', //  NEKOBOSHI MINTO
+    'UCDqI2jOz0weumE8s7paEk6g', //  ROBOCO
+    'UCp-5t9SrOQwXMU7iIjQfARg', //  OOKAMI MIO
+    'UCp6993wxpyDPHUpavwDFqgg', //  TOKINO SORA
+    'UCFTLzh12_nrtzqBPsTCqenA'  //  AKI ROSENTHAL
+];
 
 function KeySeeker(KeyName, JSONStr){
   Keyidx = JSONStr.indexOf(KeyName);
@@ -232,10 +212,13 @@ function KeySeeker(KeyName, JSONStr){
   }
 }
 
-var TLOpen = false;
-
 //-----------------------------------------  YTC SKIMMER  -----------------------------------------
-async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting, vidID){
+async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
+    const idx = SeekID(vidID);
+    if (idx == -1){
+        return;
+    }
+
     //  START FETCHING LIVE CHAT
     const res = await axios.post("https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?key=" + Key,
     {
@@ -254,11 +237,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
 
   if (!res){
     if (TrialCount == 3){
-      const idx = ActiveID.indexOf(vidID);
-      if (idx != -1){
-        FlushCloseConnectionsTL(idx);
-        FlushCloseConnectionsFilter(idx);
-      }
+      FlushCloseConnections(idx);
     } else {
       await new Promise(r => setTimeout(r, 1000));
       StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount+1, vidID);  
@@ -267,19 +246,15 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
   }
 
   if(res.status != 200){
-    const idx = ActiveID.indexOf(vidID);
     if (idx != -1){
-      FlushCloseConnectionsTL(idx);
-      FlushCloseConnectionsFilter(idx);
+      FlushCloseConnections(idx);
     }
     return;
   }
 
   if (!res.data.continuationContents){
-    const idx = ActiveID.indexOf(vidID);
     if (idx != -1){
-      FlushCloseConnectionsTL(idx);
-      FlushCloseConnectionsFilter(idx);
+      FlushCloseConnections(idx);
     }
     return;
   }
@@ -287,10 +262,8 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
   //  PARSE RESULT CONTINUATION TOKEN CHANGES BUT VISITOR TOKEN DOES NOT CHANGE
   ContTkn = KeySeeker('"continuation":"', JSON.stringify(res.data.continuationContents.liveChatContinuation.continuations));
   if (!ContTkn){
-    const idx = ActiveID.indexOf(vidID);
     if (idx != -1){
-      FlushCloseConnectionsTL(idx);
-      FlushCloseConnectionsFilter(idx);
+      FlushCloseConnections(idx);
     }
     return;
   }
@@ -300,7 +273,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
     for (const actionItem of res.data.continuationContents.liveChatContinuation.actions) {
       if ("markChatItemsByAuthorAsDeletedAction" in actionItem) {
         const CID = actionItem.markChatItemsByAuthorAsDeletedAction.externalChannelId;
-        BroadcastDelete(CID, vidID);
+        //BroadcastDelete(CID, vidID);
       } else if ("addChatItemAction" in actionItem) {
         const item = actionItem.addChatItemAction.item;
         if ("liveChatTextMessageRenderer" in item) {
@@ -429,219 +402,222 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, ProxySetting,
     }
   }
 
-  //  FILTERING FUNCTION
-  broadcastFilter(ActiveID.indexOf(vidID), JSON.stringify(MsgChunk));
-
-  // PREPARE FOR DEEPL TRANSLATION BOUNCER
-  var TLContent = [];
-  for (let i = 0; i < MsgChunk.length; i++) {
-    if (MsgChunk[i].type != 'MEMBER'){
-      let s = "";
-      MsgChunk[i].content.forEach(dt => {
-        if (dt.indexOf("https://") == -1){
-          s += dt + " ";
-        }
-      });
+  if (ListenerPack[idx].TL == true) {
+    // PREPARE FOR DEEPL TRANSLATION BOUNCER
+    var TLContent = [];
+    for (let i = 0; i < MsgChunk.length; i++) {
+        if (MsgChunk[i].type != 'MEMBER'){
+            let s = "";
+            MsgChunk[i].content.forEach(dt => {
+                if (dt.indexOf("https://") == -1){
+                s += dt + " ";
+                }
+            });
       
-      switch (s.toLowerCase()) {
-        case "lol":
-          MsgChunk[i].TL = "草";
-          continue;
+            switch (s.toLowerCase()) {
+                case "lol":
+                    MsgChunk[i].TL = "草";
+                    continue;
   
-        case "lmao":
-          MsgChunk[i].TL = "大草原";
-          continue;
+                case "lmao":
+                    MsgChunk[i].TL = "大草原";
+                    continue;
   
-        case "rofl":
-          MsgChunk[i].TL = "天まで広がる大草原";
-          continue;
-      }
-
-      if (s.length < 16){
-        continue;
-      }
-    
-      //  SKIP IF THERE'S A TRANSLATION BRACKET
-      if (s.match(/\[.*\w\w.*\]|\(.*\w\w.*\)/) != null){
-        continue;
-      }
-    
-      //  CANCEL IF THERE'S NO MORE THAN 3 CONSECUTIVE LETTERS
-      if (s.match(/\p{L}\p{L}\p{L}\p{L}+/u) == null){
-        continue;
-      }
-    
-      //  REMOVE EMOJIS
-      s = s.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '').trim();
-      let s2 = s.replace(/\s/g, '');
-    
-      //  SKIP IF LESS THAN 3
-      if (s2.length < 4){
-        continue;
-      }
-      
-      //  CANCEL IF LESS THAN HALF IS JAPANESE CHARACTERS
-      if (s2.replace(/[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/g, '').length*4.0 < s2.length*3.0){
-        continue;
-      }
-    
-      s = s.trim();
-    
-      //  REPLACE ALL THE REPEATING MORE THAN 3 TIMES
-      s2 = s.match(/(.+)\1{3,}/ug)
-      if (s2 != null){
-        s2.forEach(e => {
-          for (let dt = e[0], i = 0; dt.length != e.length; dt += e[++i]){
-            if (e.replace(new RegExp(dt.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'), '') == ""){
-              switch (dt.length) {
-                case 1:
-                  s = s.replace(e, dt + dt + dt);
-                  break;
-                case 2:
-                  s = s.replace(e, dt + dt);
-                  break;
-                default:
-                  s = s.replace(e, dt);
-                  break;
-              }
-              break;
+                case "rofl":
+                    MsgChunk[i].TL = "天まで広がる大草原";
+                    continue;
             }
-          }
-        });
-      }
+
+            if (s.length < 16){
+                continue;
+            }
+    
+            //  SKIP IF THERE'S A TRANSLATION BRACKET
+            if (s.match(/\[.*\w\w.*\]|\(.*\w\w.*\)/) != null){
+                continue;
+            }
+    
+            //  CANCEL IF THERE'S NO MORE THAN 3 CONSECUTIVE LETTERS
+            if (s.match(/\p{L}\p{L}\p{L}\p{L}+/u) == null){
+                continue;
+            }
+    
+            //  REMOVE EMOJIS
+            s = s.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '').trim();
+            let s2 = s.replace(/\s/g, '');
+    
+            //  SKIP IF LESS THAN 3
+            if (s2.length < 4){
+                continue;
+            }
+      
+            //  CANCEL IF LESS THAN HALF IS JAPANESE CHARACTERS
+            if (s2.replace(/[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/g, '').length*4.0 < s2.length*3.0){
+                continue;
+            }
+    
+            s = s.trim();
+    
+            //  REPLACE ALL THE REPEATING MORE THAN 3 TIMES
+            s2 = s.match(/(.+)\1{3,}/ug)
+            if (s2 != null){
+                s2.forEach(e => {
+                    for (let dt = e[0], i = 0; dt.length != e.length; dt += e[++i]){
+                        if (e.replace(new RegExp(dt.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'), '') == ""){
+                            switch (dt.length) {
+                                case 1:
+                                    s = s.replace(e, dt + dt + dt);
+                                    break;
+                                case 2:
+                                    s = s.replace(e, dt + dt);
+                                    break;
+                                default:
+                                    s = s.replace(e, dt);
+                                    break;
+                            }
+                        break;
+                        }
+                    }
+                });
+            }
   
-      switch (s.toLowerCase()) {
-        case "lol":
-          MsgChunk[i].TL = "草";
-          break;
+            switch (s.toLowerCase()) {
+                case "lol":
+                    MsgChunk[i].TL = "草";
+                    break;
   
-        case "lmao":
-          MsgChunk[i].TL = "大草原";
-          break;
+                case "lmao":
+                    MsgChunk[i].TL = "大草原";
+                    break;
   
-        case "rofl":
-          MsgChunk[i].TL = "天まで広がる大草原";
-          break;
+                case "rofl":
+                    MsgChunk[i].TL = "天まで広がる大草原";
+                    break;
           
-        default:
-          MsgChunk[i].TL = "ok";
-          TLContent.push(s);
-          break;
-      }
-    } 
-  }
-
-  //  GET TRANSLATION
-  if (TLContent.length != 0){
-    broadcastTL(ActiveID.indexOf(vidID), JSON.stringify(MsgChunk));
-
-    /*
-    if (TLOpen){
-      var textlist = "";
-      TLContent.forEach(dt => {
-        textlist += "text=" + dt + "&";
-      });
-  
-      textlist = "auth_key=" + DeepLAPI.APIkey + "&" + textlist + "target_lang=JA";
-  
-      const TLres = await axios.post("https://api-free.deepl.com/v2/translate", textlist).catch(e => e.response)
-  
-      if (TLres.status == 200){
-        let j = 0;
-        for(let i = 0; i < MsgChunk.length; i++){
-          if (MsgChunk[i].TL){
-            if (MsgChunk[i].TL == "ok"){
-              MsgChunk[i].TL = TLres.data.translations[j++].text;
-              if(j == TLres.data.translations.length){
+                default:
+                    MsgChunk[i].TL = "ok";
+                    TLContent.push(s);
                 break;
-              }
             }
-          }        
-        }
-  
-        broadcastTL(ActiveID.indexOf(vidID), JSON.stringify(MsgChunk));
-      } else {
-        for(let i = 0; i < MsgChunk.length; i++){
-          if (MsgChunk[i].TL){
-            delete MsgChunk[i].TL;
-          }
-        }
-  
-        broadcastTL(ActiveID.indexOf(vidID), JSON.stringify(MsgChunk));
-      }  
-    }  
-    */  
-  } else {
-    broadcastTL(ActiveID.indexOf(vidID), JSON.stringify(MsgChunk));
-  }
+        } 
+    }
 
+    //  GET TRANSLATION
+    if (TLContent.length != 0){
+        if (TLOpen){
+            var textlist = "";
+            TLContent.forEach(dt => {
+                textlist += "text=" + dt + "&";
+            });
+  
+            textlist = "auth_key=" + DeepLAPI.APIkey + "&" + textlist + "target_lang=JA";
+  
+            const TLres = await axios.post("https://api-free.deepl.com/v2/translate", textlist).catch(e => e.response)
+  
+            if (TLres.status == 200){
+                let j = 0;
+                for(let i = 0; i < MsgChunk.length; i++){
+                    if (MsgChunk[i].TL){
+                        if (MsgChunk[i].TL == "ok"){
+                            MsgChunk[i].TL = TLres.data.translations[j++].text;
+                            if(j == TLres.data.translations.length){
+                                break;
+                            }
+                        }
+                    }        
+                }
+  
+                broadcast(idx, JSON.stringify(MsgChunk));
+            } else {
+                for(let i = 0; i < MsgChunk.length; i++){
+                    if (MsgChunk[i].TL){
+                        delete MsgChunk[i].TL;
+                    }
+                }
+  
+                broadcast(idx, JSON.stringify(MsgChunk));
+            }  
+        }  
+    } else {
+        broadcast(idx, JSON.stringify(MsgChunk));
+    }
+  } else {
+    broadcast(idx, JSON.stringify(MsgChunk));
+  }
+  
   //  POLLING CALLER
-  const idx = ActiveID.indexOf(vidID);
+  ListenerPack[idx].Active = true;
   if (idx != -1){
-    if ((TLConnList[idx].length == 0) && (FilterConnList[idx].length == 0)){
-      ActiveID.splice(idx, 1);
-      TLConnList.splice(idx, 1);
-      FilterConnList.splice(idx, 1);
+    if (ListenerPack[idx].ConnList.length == 0){
+      ListenerPack.splice(idx, 1);
     } else {
       console.log("FETCHING AGAIN " + vidID);
       await new Promise(r => setTimeout(r, 2000));
-      StartYTCPoll(Key, ContTkn, VisDt, CVer, 0, ProxySetting, vidID);
+      StartYTCPoll(Key, ContTkn, VisDt, CVer, 0, vidID);
     }
   } 
-}
-
-async function BroadcastDelete(CID, VID){
-  if (CID != undefined){    
-    //UCmRd9ZiaD41vCqfJ3K5JrpQ meta itemprop="name"
-    var res = await axios.get("https://www.youtube.com/channel/" + CID, {headers: head});
-    let idx = res.data.indexOf('<meta itemprop="name"');
-    
-    if (idx == -1) {
-      return;
-    }
-
-    idx = res.data.indexOf('content="', idx);
-    if (idx == -1) {
-      return(400);
-    }
-    idx += ('content="').length;
-    let text = res.data.substr(idx, res.data.indexOf('">', idx) - idx);
-
-    idx = ActiveID.indexOf(VID);
-    if (idx != -1){
-      TLConnList[idx].forEach(c => {
-        c.res.write("data: { \"flag\":\"DELETE\", \"Nick\":\"" + text + "\"}\n\n");
-        c.res.flush();
-      })
-      FilterConnList[idx].forEach(c => {
-        c.res.write("data: { \"flag\":\"DELETE\", \"Nick\":\"" + text + "\"}\n\n");
-        c.res.flush();
-      })
-    }
-  }
 }
 //=========================================  YTC SKIMMER  =========================================
 
 
 
-var ActiveID = [];        // STRING OF VIDEO ID
-//-------------------------------------------------------- LISTENER HANDLER --------------------------------------------------------
-var TLConnList = [];      // LIST OF RES LISTENING FOR TL
 
-async function AddListenerTL(res, req, vidID){
+//-------------------------------------------------------- LISTENER HANDLER --------------------------------------------------------
+var ListenerPack = [];
+/*
+    ListenerPack {
+        ID: string // video ID
+        TL: Boolean // AUTO TL OR NOT
+        BoolPool: number Check if conenction errory before 
+        ConnList: [
+            {
+                id:
+                TL:
+                res:
+            },
+            ...
+        ]
+    }
+*/
+
+function SeekID(VidID){
+    if (ListenerPack.length == 0){
+        return (-1);
+    }
+
+    for (var i = 0; i < ListenerPack.length; i++){
+        if (ListenerPack[i].ID == VidID){
+            return (i);
+        } else if ( i == ListenerPack.length - 1){
+            return (-1);
+        }
+    }
+}
+
+async function AddListener(req, res){
+  const vidID = req.query.link;
+
+  var TL = false;
+  if (req.query.TL){
+    if (req.query.TL == true){
+        TL = req.query.TL;
+    }      
+  }
+
   const newID = Date.now();
   const NewConn = {
       id: newID,
-      res: res
+      TL: TL,
+      res: res      
   };
 
   res.writeHead(200, Contheaders);
   res.flushHeaders();
   res.write("data: { \"flag\":\"Connect\", \"content\":\"CONNECTED TO SERVER\"}\n\n");
 
-  var indextarget = ActiveID.indexOf(vidID);
+  var indextarget = SeekID(vidID);
   if (indextarget != -1){
-    TLConnList[indextarget].push(NewConn);
+      ListenerPack[indextarget].ConnList.push(NewConn);
   } else {
     var res2 = await axios.get("https://www.youtube.com/watch?v=" + vidID, {headers: head});
 
@@ -683,196 +659,76 @@ async function AddListenerTL(res, req, vidID){
       return res.status(400);
     }
     
-    ActiveID.push(vidID);
-    TLConnList.push([NewConn]);
-    FilterConnList.push([]);
-    StartYTCPoll(Key, ContTkn, VisDt, CVer, 0, "", vidID);
+    ListenerPack.push({
+        Active: true,
+        BoolPool: 0,
+        ID: vidID,
+        TL: TL,
+        ConnList: [NewConn]
+    })
+    StartYTCPoll(Key, ContTkn, VisDt, CVer, 0, vidID);
   }
 
   req.on('close', () => {
-      const idx = ActiveID.indexOf(vidID);
-      TLConnList[idx] = TLConnList[idx].filter(c => c.id !== newID);
+    const idx = SeekID(vidID);
+    if (idx != -1){
+        ListenerPack[idx].ConnList = ListenerPack[idx].ConnList.filter(c => c.id !== newID);
+        if (ListenerPack[idx].ConnList.length == 0){
+            ListenerPack.splice(idx, 1);
+        }
+    }
   });
 }
 
-function broadcastTL(idx, data){
-  if ((idx != -1) && (idx < TLConnList.length)){
-    TLConnList[idx].forEach(c => {
-      c.res.write("data:" + data + "\n\n");
-      c.res.flush();
-    })
-  }
+function broadcast(idx, data){
+    ListenerPack[idx].ConnList.forEach(c => c.res.write("data:" + data + "\n\n"));
 }
 
-function FlushCloseConnectionsTL(idx){
-  TLConnList[idx].forEach(c => {
-    c.res.status(200);
-  })
+function FlushCloseConnections(idx) {
+    for(;ListenerPack[idx].ConnList.length != 0;){
+        ListenerPack[idx].ConnList[0].res.write("data: { \"flag\":\"MSG Fetch Stop\", \"content\":\"MSG Fetch Stop\" }\n\n");
+        ListenerPack[idx].ConnList[0].res.end();
+        ListenerPack[idx].ConnList.splice(0, 1);
+        if (ListenerPack[idx].ConnList.length == 0){
+            ListenerPack.splice(idx, 1);
+            break;
+        }
+    }
 }
 
-function PingerTL() {
-  for(i = 0; i < ActiveID.length;i++){
-    broadcastTL(i, "{}");
-  }
+exports.Pinger = function() {
+    for(i = 0; i < ListenerPack.length;){
+        if (ListenerPack[i].Active){
+            if (ListenerPack[i].ConnList.length == 0){
+                ListenerPack.splice(i, 1);
+            } else {
+                ListenerPack[i].Active = false;
+                ListenerPack[i].BoolPool = 0;
+                i++;
+            }
+        } else {
+            ListenerPack[i].BoolPool += 1;
+            if (ListenerPack[i].BoolPool == 30){
+                for(;ListenerPack[i].ConnList.length != 0;){
+                    ListenerPack[i].ConnList[0].res.write("data: { \"flag\":\"timeout\", \"content\":\"Timeout\" }\n\n");
+                    ListenerPack[i].ConnList[0].res.end();
+                    ListenerPack[i].ConnList.splice(0, 1);
+                    if (ListenerPack[i].ConnList.length == 0){
+                        ListenerPack.splice(i, 1);
+                        break;
+                    }
+                }
+            } else {
+                broadcast(i, "{}");
+                i++;
+            }
+        }
+    }
 }
 //======================================================== LISTENER HANDLER ========================================================
 
 
 
-//---------------------------------------------- LISTENER FILTERER HANDLER ----------------------------------------------
-var FilterConnList = [];  // LIST OF RES LISTENING TO FILTERING
-
-async function AddListenerFilter(res, req, vidID, OptionFilter){
-  const newID = Date.now();
-  const NewConn = {
-      id: newID,
-      res: res
-  };
-
-  res.writeHead(200, Contheaders);
-  res.flushHeaders();
-  res.write("data: { \"flag\":\"Connect\", \"content\":\"CONNECTED TO SERVER\"}\n\n");
-
-  var indextarget = ActiveID.indexOf(vidID);
-  if (indextarget != -1){
-    FilterConnList[indextarget].push(NewConn);
-  } else {
-    var res2 = await axios.get("https://www.youtube.com/watch?v=" + vidID, {headers: head});
-
-    let idx = res2.data.indexOf('<meta itemprop="channelId"');
-    
-    if (idx == -1) {
-      return res.status(400);
-    }
-
-    idx = res2.data.indexOf('content="', idx);
-    if (idx == -1) {
-      return res.status(400);
-    }
-    idx += ('content="').length;
-    let text = res2.data.substr(idx, res2.data.indexOf('">', idx) - idx);
-    //if (!ReservedChannel.includes(text)) return res.status(400).send("NOT INCLUDED");
-    
-    if(res2.status != 200){
-      return res.status(400);
-    }
-    
-    var Key = KeySeeker('"INNERTUBE_API_KEY":"', res2.data);
-    if (!Key){
-      return res.status(400);
-    }
-    
-    var ContTkn = KeySeeker('"continuation":"', res2.data);
-    if (!ContTkn){
-      return res.status(400);
-    }
-    
-    var VisDt = KeySeeker('"visitorData":"', res2.data);
-    if (!VisDt){
-      return res.status(400);
-    }
-    
-    var CVer = KeySeeker('"clientVersion":"', res2.data);
-    if (!CVer){
-      return res.status(400);
-    }
-    
-    ActiveID.push(vidID);
-    FilterConnList.push([NewConn]);
-    TLConnList.push([]);
-    StartYTCPoll(Key, ContTkn, VisDt, CVer, 0, "", vidID);
-  }
-
-  req.on('close', () => {
-      const idx = ActiveID.indexOf(vidID);
-      FilterConnList[idx] = FilterConnList[idx].filter(c => c.id !== newID);
-  });
+exports.MainGate = async function (req, res) {
+    AddListener(req, res);
 }
-
-function broadcastFilter(idx, data){
-  if ((idx != -1) && (idx < FilterConnList.length)){
-    FilterConnList[idx].forEach(c => {
-      c.res.write("data:" + data + "\n\n");
-      c.res.flush();
-    })
-  }
-}
-
-function FlushCloseConnectionsFilter(idx){
-  FilterConnList[idx].forEach(c => {
-    c.res.status(200);
-  })
-}
-
-function PingerFilter() {
-  for(i = 0; i < ActiveID.length;i++){
-    broadcastFilter(i, "{}");
-  }
-}
-//============================================== LISTENER FILTERER HANDLER ==============================================
-
-
-
-//-----------------------------------------  SERVER HANDLER  -----------------------------------------
-//app.get('/Skimmer', cors(corsOptions), async function (req, res) {
-app.get('/AutoTL', async function (req, res) {
-  if (req.query.VidID) {
-    AddListenerTL(res, req, req.query.VidID);    
-  } else if (req.query.ChannelID) {
-    var res2 = await axios.get("https://www.youtube.com/channel/" + req.query.ChannelID + "/live", {headers: head});
-    let idx = res2.data.indexOf('"liveStreamabilityRenderer":{"videoId":"');
-  
-    if (idx == -1){
-      return res.status(400).send("NOT LIVE");
-    }
-    idx += ('"liveStreamabilityRenderer":{"videoId":"').length;
-  
-    let vidID = res2.data.substring(idx, res2.data.indexOf('","', idx));
-    AddListenerTL(res, req, vidID);
-  } else {
-    return res.status(400).send("NO ID TO STREAM");
-  }
-})
-
-app.get('/PureProxy', async function (req, res) {
-  if (req.query.VidID) {
-    AddListenerFilter(res, req, req.query.VidID, "");
-  } else if (req.query.ChannelID) {
-    var res2 = await axios.get("https://www.youtube.com/channel/" + req.query.ChannelID + "/live", {headers: head});
-    let idx = res2.data.indexOf('"liveStreamabilityRenderer":{"videoId":"');
-  
-    if (idx == -1){
-      return res.status(400).send("NOT LIVE");
-    }
-    idx += ('"liveStreamabilityRenderer":{"videoId":"').length;
-  
-    let vidID = res2.data.substring(idx, res2.data.indexOf('","', idx));
-    AddListenerFilter(res, req, vidID, "");
-  } else {
-    return res.status(400).send("NO ID TO STREAM");
-  }
-})
-
-app.get('/ChannelLive', async function (req,res) {
-  if (!req.query.ChannelID) {
-    return res.status(400).send("NO CHANNEL ID");
-  }
-
-  var res2 = await axios.get("https://www.youtube.com/channel/" + req.query.ChannelID + "/live", {headers: head});
-  let idx = res2.data.indexOf('"liveStreamabilityRenderer":{"videoId":"');
-
-  if (idx == -1){
-    return res.status(400).send("NOT LIVE");
-  }
-  idx += ('"liveStreamabilityRenderer":{"videoId":"').length;
-
-  let vidID = res2.data.substring(idx, res2.data.indexOf('","', idx));
-  return res.status(200).send(vidID);  
-})
-
-app.listen(PORT, async function () {
-  //setInterval(PingerTL, 1000*10);
-  //setInterval(PingerFilter, 1000*10);
-  //setInterval( () => {TLOpen = true;}, 1000*3600*24);
-  console.log(`Server initialized on port ${PORT}`);
-})

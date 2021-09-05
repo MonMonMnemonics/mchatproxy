@@ -4,7 +4,7 @@
   "description": "MChad Chat Skimmer",
   "main": "test.js",
   "scripts": {
-    "start": "node test.js"
+    "start": "node Main.js"
   },
   "author": "MonMon Mnemonics",
   "license": "ISC",
