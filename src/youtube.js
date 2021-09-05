@@ -214,7 +214,7 @@ function KeySeeker(KeyName, JSONStr){
 
 //-----------------------------------------  YTC SKIMMER  -----------------------------------------
 async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
-    const idx = SeekID(vidID);
+    var idx = SeekID(vidID);
     if (idx == -1){
         return;
     }
@@ -237,7 +237,10 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
 
   if (!res){
     if (TrialCount == 3){
-      FlushCloseConnections(idx);
+      idx = SeekID(vidID);
+      if (idx != -1){
+        FlushCloseConnections(idx);
+      }
     } else {
       await new Promise(r => setTimeout(r, 1000));
       StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount+1, vidID);  
@@ -246,6 +249,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
   }
 
   if(res.status != 200){
+    idx = SeekID(vidID);
     if (idx != -1){
       FlushCloseConnections(idx);
     }
@@ -253,6 +257,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
   }
 
   if (!res.data.continuationContents){
+    idx = SeekID(vidID);
     if (idx != -1){
       FlushCloseConnections(idx);
     }
@@ -262,6 +267,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
   //  PARSE RESULT CONTINUATION TOKEN CHANGES BUT VISITOR TOKEN DOES NOT CHANGE
   ContTkn = KeySeeker('"continuation":"', JSON.stringify(res.data.continuationContents.liveChatContinuation.continuations));
   if (!ContTkn){
+    idx = SeekID(vidID);
     if (idx != -1){
       FlushCloseConnections(idx);
     }
@@ -273,7 +279,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
     for (const actionItem of res.data.continuationContents.liveChatContinuation.actions) {
       if ("markChatItemsByAuthorAsDeletedAction" in actionItem) {
         const CID = actionItem.markChatItemsByAuthorAsDeletedAction.externalChannelId;
-        //BroadcastDelete(CID, vidID);
+        BroadcastDelete(CID, vidID);
       } else if ("addChatItemAction" in actionItem) {
         const item = actionItem.addChatItemAction.item;
         if ("liveChatTextMessageRenderer" in item) {
@@ -402,6 +408,11 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
     }
   }
 
+  idx = SeekID(vidID);
+  if (idx == -1){
+      return;
+  }
+  broadcastNormal(idx, JSON.stringify(MsgChunk));
   if (ListenerPack[idx].TL == true) {
     // PREPARE FOR DEEPL TRANSLATION BOUNCER
     var TLContent = [];
@@ -504,50 +515,58 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
 
     //  GET TRANSLATION
     if (TLContent.length != 0){
-        if (TLOpen){
-            var textlist = "";
-            TLContent.forEach(dt => {
-                textlist += "text=" + dt + "&";
-            });
-  
-            textlist = "auth_key=" + DeepLAPI.APIkey + "&" + textlist + "target_lang=JA";
-  
-            const TLres = await axios.post("https://api-free.deepl.com/v2/translate", textlist).catch(e => e.response)
-  
-            if (TLres.status == 200){
-                let j = 0;
-                for(let i = 0; i < MsgChunk.length; i++){
-                    if (MsgChunk[i].TL){
-                        if (MsgChunk[i].TL == "ok"){
-                            MsgChunk[i].TL = TLres.data.translations[j++].text;
-                            if(j == TLres.data.translations.length){
-                                break;
-                            }
+        var textlist = "";
+        TLContent.forEach(dt => {
+            textlist += "text=" + dt + "&";
+        });
+
+        textlist = "auth_key=" + DeepLAPI.APIkey + "&" + textlist + "target_lang=JA";
+
+        const TLres = await axios.post("https://api-free.deepl.com/v2/translate", textlist).catch(e => e.response)
+        console.log(TLres.status);
+
+        if (TLres.status == 200){
+            let j = 0;
+            for(let i = 0; i < MsgChunk.length; i++){
+                if (MsgChunk[i].TL){
+                    if (MsgChunk[i].TL == "ok"){
+                        MsgChunk[i].TL = TLres.data.translations[j++].text;
+                        if(j == TLres.data.translations.length){
+                            break;
                         }
-                    }        
-                }
-  
-                broadcast(idx, JSON.stringify(MsgChunk));
-            } else {
-                for(let i = 0; i < MsgChunk.length; i++){
-                    if (MsgChunk[i].TL){
-                        delete MsgChunk[i].TL;
                     }
+                }        
+            }
+            idx = SeekID(vidID);
+            if (idx == -1){
+                return;
+            }
+            broadcastTL(idx, JSON.stringify(MsgChunk));
+        } else {
+            for(let i = 0; i < MsgChunk.length; i++){
+                if (MsgChunk[i].TL){
+                    delete MsgChunk[i].TL;
                 }
-  
-                broadcast(idx, JSON.stringify(MsgChunk));
-            }  
+            }
+            idx = SeekID(vidID);
+            if (idx == -1){
+                return;
+            }
+            broadcastTL(idx, JSON.stringify(MsgChunk));
         }  
     } else {
-        broadcast(idx, JSON.stringify(MsgChunk));
+        idx = SeekID(vidID);
+        if (idx == -1){
+            return;
+        }
+        broadcastTL(idx, JSON.stringify(MsgChunk));
     }
-  } else {
-    broadcast(idx, JSON.stringify(MsgChunk));
   }
   
   //  POLLING CALLER
-  ListenerPack[idx].Active = true;
+  idx = SeekID(vidID);
   if (idx != -1){
+    ListenerPack[idx].Active = true;
     if (ListenerPack[idx].ConnList.length == 0){
       ListenerPack.splice(idx, 1);
     } else {
@@ -599,8 +618,8 @@ async function AddListener(req, res){
 
   var TL = false;
   if (req.query.TL){
-    if (req.query.TL == true){
-        TL = req.query.TL;
+    if (req.query.TL == "OK"){
+        TL = true;
     }      
   }
 
@@ -618,6 +637,9 @@ async function AddListener(req, res){
   var indextarget = SeekID(vidID);
   if (indextarget != -1){
       ListenerPack[indextarget].ConnList.push(NewConn);
+      if (TL == true){
+          ListenerPack[indextarget].TL = true;
+      }
   } else {
     var res2 = await axios.get("https://www.youtube.com/watch?v=" + vidID, {headers: head});
 
@@ -675,14 +697,61 @@ async function AddListener(req, res){
         ListenerPack[idx].ConnList = ListenerPack[idx].ConnList.filter(c => c.id !== newID);
         if (ListenerPack[idx].ConnList.length == 0){
             ListenerPack.splice(idx, 1);
+        } else if (TL == true) {
+            if (ListenerPack[idx].ConnList.filter(c => c.TL == true).length == 0){
+                ListenerPack[idx].TL = false;
+            }
         }
+        
     }
   });
 }
 
-function broadcast(idx, data){
-    ListenerPack[idx].ConnList.forEach(c => c.res.write("data:" + data + "\n\n"));
+function broadcastTL(idx, data){
+    if (ListenerPack[idx]){
+        ListenerPack[idx].ConnList.filter(c => c.TL == true).forEach(c => c.res.write("data:" + data + "\n\n"));
+    }    
 }
+
+function broadcastNormal(idx, data){
+    if (ListenerPack[idx]){
+        ListenerPack[idx].ConnList.filter(c => c.TL != true).forEach(c => c.res.write("data:" + data + "\n\n"));
+    }    
+}
+
+function broadcastAll(idx, data) {
+    if (ListenerPack[idx]){
+        ListenerPack[idx].ConnList.forEach(c => c.res.write("data:" + data + "\n\n"));
+    }    
+}
+
+
+async function BroadcastDelete(CID, VID){
+    if (CID != undefined){    
+      //UCmRd9ZiaD41vCqfJ3K5JrpQ meta itemprop="name"
+      var res = await axios.get("https://www.youtube.com/channel/" + CID, {headers: head});
+      let idx = res.data.indexOf('<meta itemprop="name"');
+      
+      if (idx == -1) {
+        return;
+      }
+  
+      idx = res.data.indexOf('content="', idx);
+      if (idx == -1) {
+        return(400);
+      }
+      idx += ('content="').length;
+      let text = res.data.substr(idx, res.data.indexOf('">', idx) - idx);
+  
+      idx = SeekID(VID);
+      if (idx != -1){
+        ListenerPack[idx].ConnList.forEach(c => {
+          c.res.write("data: { \"flag\":\"DELETE\", \"Nick\":\"" + text + "\"}\n\n");
+          c.res.flush();
+        });
+      }
+    }
+  }
 
 function FlushCloseConnections(idx) {
     for(;ListenerPack[idx].ConnList.length != 0;){
@@ -719,7 +788,8 @@ exports.Pinger = function() {
                     }
                 }
             } else {
-                broadcast(i, "{}");
+                broadcastTL(i, "{}");
+                broadcastNormal(i, "{}");
                 i++;
             }
         }
