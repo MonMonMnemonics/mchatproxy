@@ -181,17 +181,9 @@ Action item
 
 const axios = require('axios');
 const DeepLAPI = require("../DeepL.json");
+const Constants = require("./Constants.json");
 
 const head = {'user-agent': 'Mozilla5.0 (Windows NT 10.0; Win64; x64) AppleWebKit537.36 (KHTML, like Gecko) Chrome75.0.3770.142 Safari537.36'}    
-
-const Contheaders = {
-  'Content-Type': 'text/event-stream',
-  'Connection': 'keep-alive',
-  'Cache-Control': 'no-cache',
-  //"Access-Control-Allow-Origin": "https://mchatx.org",
-  "Access-Control-Allow-Origin": "*",
-  'X-Accel-Buffering': 'no'
-};
 
 const ReservedChannel = [
     'UCxvlgkpP5z98LsRudHN_Ucg', //  NEKOBOSHI MINTO
@@ -630,7 +622,7 @@ async function AddListener(req, res){
       res: res      
   };
 
-  res.writeHead(200, Contheaders);
+  res.writeHead(200, Constants.Contheaders);
   res.flushHeaders();
   res.write("data: { \"flag\":\"Connect\", \"content\":\"CONNECTED TO SERVER\"}\n\n");
 
@@ -800,7 +792,6 @@ exports.Pinger = function() {
 
 
 exports.MainGate = async function (req, res) {
-  console.log(req.query);
   if (!req.query.TL){
     AddListener(req, res);
   } else {

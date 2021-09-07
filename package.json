@@ -15,6 +15,7 @@
     "express": "^4.17.1",
     "fs": "0.0.1-security",
     "node-html-parser": "^3.3.5",
-    "request": "^2.88.2"
+    "request": "^2.88.2",
+    "tmi.js": "^1.8.5"
   }
 }
