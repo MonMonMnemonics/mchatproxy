@@ -364,7 +364,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
           MsgChunk.push({
             author: item.liveChatPaidMessageRenderer.authorName.simpleText,
             authorPhoto: item.liveChatPaidMessageRenderer.authorPhoto.thumbnails[item.liveChatPaidMessageRenderer.authorPhoto.thumbnails.length - 1].url,
-            type: "SC",
+            type: "DT",
             SC: item.liveChatPaidMessageRenderer.purchaseAmountText.simpleText,
             content: MessageContent,
             BC: "#" + parseInt(item.liveChatPaidMessageRenderer.bodyBackgroundColor).toString(16).substring(2).toUpperCase()
@@ -387,7 +387,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
           MsgChunk.push({
             author: item.liveChatMembershipItemRenderer.authorName.simpleText,
             authorPhoto: item.liveChatMembershipItemRenderer.authorPhoto.thumbnails[item.liveChatMembershipItemRenderer.authorPhoto.thumbnails.length - 1].url,
-            type: "MEMBER",
+            type: "NM",
             content: MessageContent
           });
         } else if ("liveChatPaidStickerRenderer" in item) {
@@ -395,7 +395,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
           MsgChunk.push({
             author: item.liveChatPaidStickerRenderer.authorName.simpleText,
             authorPhoto: item.liveChatPaidStickerRenderer.authorPhoto.thumbnails[item.liveChatPaidMessageRenderer.authorPhoto.thumbnails.length - 1].url,
-            type: "SCS",
+            type: "DS",
             SC: item.liveChatPaidStickerRenderer.purchaseAmountText.simpleText,
             content: ["https:" + item.liveChatPaidStickerRenderer.sticker.thumbnails[item.liveChatPaidStickerRenderer.sticker.thumbnails.length - 1].url],
             BC: "#" + parseInt(item.liveChatPaidStickerRenderer.backgroundColor).toString(16).substring(2).toUpperCase()
@@ -417,7 +417,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
     // PREPARE FOR DEEPL TRANSLATION BOUNCER
     var TLContent = [];
     for (let i = 0; i < MsgChunk.length; i++) {
-        if (MsgChunk[i].type != 'MEMBER'){
+        if (MsgChunk[i].type != 'NM'){
             let s = "";
             MsgChunk[i].content.forEach(dt => {
                 if (dt.indexOf("https://") == -1){
@@ -800,5 +800,20 @@ exports.Pinger = function() {
 
 
 exports.MainGate = async function (req, res) {
+  console.log(req.query);
+  if (!req.query.TL){
     AddListener(req, res);
+  } else {
+    if (req.query.channel){
+      if (ReservedChannel.indexOf(req.query.channel) != -1){
+        AddListener(req, res);
+      } else {
+        delete req.query.TL;
+        AddListener(req, res);
+      }      
+    } else {
+      delete req.query.TL;
+      AddListener(req, res);
+    }
+  }  
 }

@@ -1,6 +1,8 @@
 const YTHandler = require("./src/youtube");
 
 const axios = require('axios');
+const request = require('request');
+
 const parse = require('node-html-parser');
 const express = require("express")
 const cors = require('cors')
@@ -27,7 +29,26 @@ app.get('/ChatProxy', async function (req, res) {
     switch(req.query.link.substring(0,3)){
       case "YT_":
         req.query.link = req.query.link.substring(3);
-        YTHandler.MainGate(req, res);
+        request("https://www.youtube.com/watch?v=" + req.query.link, function (error, response, body) {
+          if (error){
+            return res.status(400).send("NOT OK");
+          }
+  
+          if (body.indexOf('<meta itemprop="channelId"') == -1){
+            return res.status(400).send("NOT OK");
+          }
+  
+          var idx = body.indexOf('content="', body.indexOf('<meta itemprop="channelId"'));
+  
+          if (idx == -1){
+            return res.status(400).send("NOT OK");
+          }
+  
+          idx += ('content="').length;
+          req.query.channel = body.substr(idx, body.indexOf('">', idx) - idx);
+  
+          YTHandler.MainGate(req, res);
+          });
         break;
       case "TW_":
         res.status(400).send("Unable to handle this stream link");
