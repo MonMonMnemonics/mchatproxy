@@ -3,10 +3,8 @@
         "Content-Type": "text/event-stream",
         "Connection": "keep-alive",
         "Cache-Control": "no-cache",
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "https://app.mchatx.org",
         "X-Accel-Buffering": "no"
-    },
-    
-    "Access-Control-Allow-Origin": "https://mchatx.org"
+    }    
 }
   

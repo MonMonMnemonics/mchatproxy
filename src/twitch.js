@@ -1,6 +1,7 @@
 const DeepLAPI = require("../DeepL.json");
 const tmi = require('tmi.js');
 const Constants = require("./Constants.json");
+const axios = require('axios');
 
 const ReservedChannel = [
 ];
@@ -92,7 +93,6 @@ async function AddListener(req, res){
         var TLContent = message;
         var em = "";
         if (tags.emotes){
-            console.log("EMOTE!");
             Object.entries(tags.emotes).forEach(([id, positions]) => {
                 const [start, end] = positions[0].split("-");
                 if (em != ""){
@@ -102,25 +102,26 @@ async function AddListener(req, res){
             });
         }
 
-        TLContent = TLContent.replace(new RegExp(em, "g"), "");
+        TLContent = TLContent.replace(new RegExp(em, "g"), "").replace(/https:\/\/[^\s]*/g, "").trim();
 
+        /*
         if (message != TLContent){
             console.log(em);
             console.log({
                 message: message,
-                TLContent: TLContent,
+                TL: TLContent,
                 emoteonly: tags["emote-only"]
             })
         }
-        /*
+        */
+
         Pack.MsgBucket.push({
             author: tags["display-name"],
             badges: tags.badges,
             emotes: tags.emotes,
             message: message,
-            TLContent: TLContent
+            TL: TLContent
         })
-        */
     });
     
     client.connect();
@@ -201,6 +202,145 @@ function FlushCloseConnections(idx) {
     }
 }
 
+exports.SendBucket = async function() {
+    ListenerPack.forEach(async (e) => {
+        var MsgChunk = e.MsgBucket.splice(0, e.MsgBucket.length);
+        var TLContent = [];
+        for (let i = 0; i < MsgChunk.length; i++) {
+            let s = MsgChunk[i].TL;
+      
+            switch (s.toLowerCase()) {
+                case "lol":
+                    MsgChunk[i].TL = "草";
+                    continue;
+  
+                case "lmao":
+                    MsgChunk[i].TL = "大草原";
+                    continue;
+  
+                case "rofl":
+                    MsgChunk[i].TL = "天まで広がる大草原";
+                    continue;
+            }
+
+            if (s.length < 16){
+                delete MsgChunk[i].TL;
+                continue;
+            }
+    
+            //  SKIP IF THERE'S A TRANSLATION BRACKET
+            if (s.match(/\[.*\w\w.*\]|\(.*\w\w.*\)/) != null){
+                delete MsgChunk[i].TL;
+                continue;
+            }
+    
+            //  CANCEL IF THERE'S NO MORE THAN 3 CONSECUTIVE LETTERS
+            if (s.match(/\p{L}\p{L}\p{L}\p{L}+/u) == null){
+                delete MsgChunk[i].TL;
+                continue;
+            }
+    
+            //  REMOVE EMOJIS
+            s = s.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '').trim();
+            let s2 = s.replace(/\s/g, '');
+    
+            //  SKIP IF LESS THAN 3
+            if (s2.length < 4){
+                delete MsgChunk[i].TL;
+                continue;
+            }
+      
+            //  CANCEL IF LESS THAN HALF IS JAPANESE CHARACTERS
+            if (s2.replace(/[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/g, '').length*4.0 < s2.length*3.0){
+                delete MsgChunk[i].TL;
+                continue;
+            }
+    
+            s = s.trim();
+    
+            //  REPLACE ALL THE REPEATING MORE THAN 3 TIMES
+            s2 = s.match(/(.+)\1{3,}/ug)
+            if (s2 != null){
+                s2.forEach(e => {
+                    for (let dt = e[0], i = 0; dt.length != e.length; dt += e[++i]){
+                        if (e.replace(new RegExp(dt.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'), '') == ""){
+                            switch (dt.length) {
+                                case 1:
+                                    s = s.replace(e, dt + dt + dt);
+                                    break;
+                                case 2:
+                                    s = s.replace(e, dt + dt);
+                                    break;
+                                default:
+                                    s = s.replace(e, dt);
+                                    break;
+                            }
+                        break;
+                        }
+                    }
+                });
+            }
+  
+            switch (s.toLowerCase()) {
+                case "lol":
+                    MsgChunk[i].TL = "草";
+                    break;
+  
+                case "lmao":
+                    MsgChunk[i].TL = "大草原";
+                    break;
+  
+                case "rofl":
+                    MsgChunk[i].TL = "天まで広がる大草原";
+                    break;
+          
+                default:
+                    MsgChunk[i].TL = "ok";
+                    TLContent.push(s);
+                break;
+            }
+        }
+
+        //  GET TRANSLATION
+        if (TLContent.length != 0){
+            var textlist = "";
+            TLContent.forEach(dt => {
+                textlist += "text=" + dt + "&";
+            });
+
+            textlist = "auth_key=" + DeepLAPI.APIkey + "&" + textlist + "target_lang=JA";
+
+            const TLres = await axios.post("https://api-free.deepl.com/v2/translate", textlist).catch(e => e.response)
+            console.log(TLres.status);
+
+            if (TLres.status == 200){
+                let j = 0;
+                for(let i = 0; i < MsgChunk.length; i++){
+                    if (MsgChunk[i].TL){
+                        if (MsgChunk[i].TL == "ok"){
+                            MsgChunk[i].TL = TLres.data.translations[j++].text;
+                            if(j == TLres.data.translations.length){
+                                break;
+                            }
+                        }
+                    }        
+                }
+
+                e.ConnList.forEach(c => c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n"));
+            } else {
+                for(let i = 0; i < MsgChunk.length; i++){
+                    if (MsgChunk[i].TL){
+                        delete MsgChunk[i].TL;
+                    }
+                }
+                e.ConnList.forEach(c => c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n"));
+            }  
+        } else {
+            e.ConnList.forEach(c => c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n"));
+        }    
+    });
+}
+
 exports.Pinger = function() {
     for(i = 0; i < ListenerPack.length;){
         if (ListenerPack[i].Active){
@@ -234,8 +374,6 @@ exports.Pinger = function() {
 //======================================================== LISTENER HANDLER ========================================================
 
 exports.MainGate = function (req, res) {
-    AddListener(req, res);
-    /*
     if (!req.query.TL){
         return (res.status(400).send("Twitch only available for translation"));
       } else {
@@ -249,5 +387,4 @@ exports.MainGate = function (req, res) {
           return (res.status(400).send("Twitch only available for translation"));
         }
     } 
-    */ 
 }
