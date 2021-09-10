@@ -1,6 +1,7 @@
 const YTHandler = require("./src/youtube");
 const TWHandler = require("./src/twitch");
 const TCHandler = require("./src/twitcast");
+const BLHandler = require("./src/bilibili");
 
 const axios = require('axios');
 const request = require('request');
@@ -70,7 +71,9 @@ app.get('/ChatProxy', async function (req, res) {
         res.status(400).send("Unable to handle this stream link");
         break;
       case "BL_":
-        res.status(400).send("Unable to handle this stream link");
+        req.query.link = req.query.link.substring(3);
+        req.query.channel = req.query.link;
+        BLHandler.MainGate(req, res);
         break;
       default:
         return res.status(400).send("Unable to handle this stream link");
@@ -93,10 +96,12 @@ app.get('/ChatProxy', async function (req, res) {
       case "TW_":
         req.query.channel = req.query.channel.substring(3);
         req.query.link = req.query.channel;
-        TCHandler.MainGate(req, res);
+        TWHandler.MainGate(req, res);
         break;
       case "TC_":
-        res.status(400).send("Unable to handle this stream link");
+        req.query.channel = req.query.channel.substring(3);
+        req.query.link = req.query.channel;
+        TCHandler.MainGate(req, res);
         break;
       case "NL_":
         res.status(400).send("Unable to handle this stream link");
@@ -105,7 +110,9 @@ app.get('/ChatProxy', async function (req, res) {
         res.status(400).send("Unable to handle this stream link");
         break;
       case "BL_":
-        res.status(400).send("Unable to handle this stream link");
+        req.query.channel = req.query.channel.substring(3);
+        req.query.link = req.query.channel;
+        BLHandler.MainGate(req, res);
         break;
       default:
         return res.status(400).send("Unable to handle this stream link");
@@ -135,6 +142,8 @@ app.get('/ChannelLive', async function (req,res) {
 app.listen(PORT, async function () {
   setInterval(YTHandler.Pinger, 1000*10);
   setInterval(TWHandler.Pinger, 1000*10);
+  setInterval(TCHandler.Pinger, 1000*10);
   setInterval(TWHandler.SendBucket, 1000*2);
+  setInterval(TCHandler.SendBucket, 1000*2);
   console.log(`Server initialized on port ${PORT}`);
 })

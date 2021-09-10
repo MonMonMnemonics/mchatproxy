@@ -12,9 +12,12 @@ const ReservedChannel = [
 var ListenerPack = [];
 /*
     ListenerPack {
-        ID: string // video ID
+        ID: channel // ID
         TL: Boolean // AUTO TL OR NOT
-        BoolPool: number Check if conenction errory before 
+        BoolPool: number Check if connection errory before 
+        WS: Client for listener,
+        WSlink: link to the wss,
+        MsgBucket: Bucket to be emptied and processed every 2 seconds
         ConnList: [
             {
                 id:
@@ -41,7 +44,7 @@ function SeekID(VidID){
 }
 
 async function AddListener(req, res){
-  const vidID = req.query.link;
+  const vidID = req.query.channel;
 
   var TL = false;
   if (req.query.TL){
@@ -68,54 +71,63 @@ async function AddListener(req, res){
           ListenerPack[indextarget].TL = true;
       }
   } else {
-    var res2 = await axios.get("https://www.youtube.com/watch?v=" + vidID, {headers: head});
+    const ws = new WebSocket(req.query.wss);
 
-    let idx = res2.data.indexOf('<meta itemprop="channelId"');
-    
-    if (idx == -1) {
-      return res.status(400);
-    }
-
-    idx = res2.data.indexOf('content="', idx);
-    if (idx == -1) {
-      return res.status(400);
-    }
-    idx += ('content="').length;
-    let text = res2.data.substr(idx, res2.data.indexOf('">', idx) - idx);
-    //if (!ReservedChannel.includes(text)) return res.status(400).send("NOT INCLUDED");
-    
-    if(res2.status != 200){
-      return res.status(400);
-    }
-    
-    var Key = KeySeeker('"INNERTUBE_API_KEY":"', res2.data);
-    if (!Key){
-      return res.status(400);
-    }
-    
-    var ContTkn = KeySeeker('"continuation":"', res2.data);
-    if (!ContTkn){
-      return res.status(400);
-    }
-    
-    var VisDt = KeySeeker('"visitorData":"', res2.data);
-    if (!VisDt){
-      return res.status(400);
-    }
-    
-    var CVer = KeySeeker('"clientVersion":"', res2.data);
-    if (!CVer){
-      return res.status(400);
-    }
-    
-    ListenerPack.push({
+    const Pack = {
         Active: true,
         BoolPool: 0,
         ID: vidID,
         TL: TL,
+        WS: ws,
+        WSlink: req.query.wss,
+        MsgBucket: [],
         ConnList: [NewConn]
-    })
-    StartYTCPoll(Key, ContTkn, VisDt, CVer, 0, vidID);
+    }
+
+    ListenerPack.push(Pack);
+    /*
+    ws.onopen = function (event) {
+        console.log("CONNECTED");
+    };
+    
+    ws.onclose = function (event) {
+        console.log("CLOSED");
+    };
+    */
+    ws.onmessage = function (event) {
+        JSON.parse(event.data).forEach(e => {
+            switch (e.type) {
+                case "gift":
+                    console.log({
+                        type: e.type,
+                        author: e.sender.name,
+                        screenName: e.sender.screenName,
+                        thumbnailURL: e.sender.profileImage,
+                        message: decodeURIComponent(e.message),
+                        item: e.item
+                    });
+                    break;
+            
+                case "comment":
+                    console.log("comment");
+                    var TLContent = decodeURIComponent(e.message),
+                    TLContent = TLContent.replace(/https:\/\/[^\s]*/g, "").trim();
+            
+                    Pack.MsgBucket.push({
+                        author: e.author.name,
+                        screenname: e.author.screenName,
+                        thumbnailURL: e.author.profileImage,
+                        message: decodeURIComponent(e.message),
+                        TL: TLContent
+                    })
+                    break;
+                
+                default:
+                    console.log(e.type);
+                    break;
+            }
+        });
+    };
   }
 
   req.on('close', () => {
@@ -123,6 +135,7 @@ async function AddListener(req, res){
     if (idx != -1){
         ListenerPack[idx].ConnList = ListenerPack[idx].ConnList.filter(c => c.id !== newID);
         if (ListenerPack[idx].ConnList.length == 0){
+            ListenerPack[idx].WS.close()
             ListenerPack.splice(idx, 1);
         } else if (TL == true) {
             if (ListenerPack[idx].ConnList.filter(c => c.TL == true).length == 0){
@@ -192,6 +205,148 @@ function FlushCloseConnections(idx) {
     }
 }
 
+exports.SendBucket = async function() {
+    ListenerPack.forEach(async (e) => {
+        var MsgChunk = e.MsgBucket.splice(0, e.MsgBucket.length);
+        var TLContent = [];
+        for (let i = 0; i < MsgChunk.length; i++) {
+            let s = MsgChunk[i].TL;
+      
+            switch (s.toLowerCase()) {
+                case "lol":
+                    MsgChunk[i].TL = "草";
+                    continue;
+  
+                case "lmao":
+                    MsgChunk[i].TL = "大草原";
+                    continue;
+  
+                case "rofl":
+                    MsgChunk[i].TL = "天まで広がる大草原";
+                    continue;
+            }
+
+            s = s.replace(/w{3,}/gi, "草");
+
+            if (s.length < 16){
+                delete MsgChunk[i].TL;
+                continue;
+            }
+    
+            //  SKIP IF THERE'S A TRANSLATION BRACKET
+            if (s.match(/\[.*\w\w.*\]|\(.*\w\w.*\)/) != null){
+                delete MsgChunk[i].TL;
+                continue;
+            }
+    
+            //  CANCEL IF THERE'S NO MORE THAN 3 CONSECUTIVE LETTERS
+            if (s.match(/\p{L}\p{L}\p{L}\p{L}+/u) == null){
+                delete MsgChunk[i].TL;
+                continue;
+            }
+    
+            //  REMOVE EMOJIS
+            s = s.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '').trim();
+            let s2 = s.replace(/\s/g, '');
+    
+            //  SKIP IF LESS THAN 3
+            if (s2.length < 4){
+                delete MsgChunk[i].TL;
+                continue;
+            }
+      
+            //  CANCEL IF LESS THAN HALF IS JAPANESE CHARACTERS
+            if (s2.replace(/[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/g, '').length*4.0 < s2.length*3.0){
+                delete MsgChunk[i].TL;
+                continue;
+            }
+    
+            s = s.trim();
+    
+            //  REPLACE ALL THE REPEATING MORE THAN 3 TIMES
+            s2 = s.match(/(.+)\1{3,}/ug)
+            if (s2 != null){
+                s2.forEach(e => {
+                    for (let dt = e[0], i = 0; dt.length != e.length; dt += e[++i]){
+                        if (e.replace(new RegExp(dt.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'), '') == ""){
+                            switch (dt.length) {
+                                case 1:
+                                    s = s.replace(e, dt + dt + dt);
+                                    break;
+                                case 2:
+                                    s = s.replace(e, dt + dt);
+                                    break;
+                                default:
+                                    s = s.replace(e, dt);
+                                    break;
+                            }
+                        break;
+                        }
+                    }
+                });
+            }
+  
+            switch (s.toLowerCase()) {
+                case "lol":
+                    MsgChunk[i].TL = "草";
+                    break;
+  
+                case "lmao":
+                    MsgChunk[i].TL = "大草原";
+                    break;
+  
+                case "rofl":
+                    MsgChunk[i].TL = "天まで広がる大草原";
+                    break;
+          
+                default:
+                    MsgChunk[i].TL = "ok";
+                    TLContent.push(s);
+                break;
+            }
+        }
+
+        //  GET TRANSLATION
+        if (TLContent.length != 0){
+            var textlist = "";
+            TLContent.forEach(dt => {
+                textlist += "text=" + dt + "&";
+            });
+
+            textlist = "auth_key=" + DeepLAPI.APIkey + "&" + textlist + "target_lang=JA";
+
+            const TLres = await axios.post("https://api-free.deepl.com/v2/translate", textlist).catch(e => e.response)
+            console.log(TLres.status);
+            console.log(TLres.data.translations);
+
+            if (TLres.status == 200){
+                let j = 0;
+                for(let i = 0; i < MsgChunk.length; i++){
+                    if (MsgChunk[i].TL){
+                        if (MsgChunk[i].TL == "ok"){
+                            MsgChunk[i].TL = TLres.data.translations[j++].text;
+                            if(j == TLres.data.translations.length){
+                                break;
+                            }
+                        }
+                    }        
+                }
+
+                e.ConnList.forEach(c => c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n"));
+            } else {
+                for(let i = 0; i < MsgChunk.length; i++){
+                    if (MsgChunk[i].TL){
+                        delete MsgChunk[i].TL;
+                    }
+                }
+                e.ConnList.forEach(c => c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n"));
+            }  
+        } else {
+            e.ConnList.forEach(c => c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n"));
+        }    
+    });
+}
+
 exports.Pinger = function() {
     for(i = 0; i < ListenerPack.length;){
         if (ListenerPack[i].Active){
@@ -229,108 +384,74 @@ exports.Pinger = function() {
 exports.MainGate = async function (req, res) {
     if (req.query.link.indexOf("/") == -1){
         req.query.channel = req.query.link;
-        request("https://frontendapi.twitcasting.tv/users/" + req.query.channel + "/latest-movie", function (error, response, body) {
-            if (error){
-              return res.status(400).send("NOT OK");
-            }
-        
-            try {
-                body = JSON.parse(body);    
-            } catch (error) {
-                return res.status(400).send("NOT OK");
-            }
+
+        const idx = SeekID(req.query.channel);
+
+        if (idx != -1){
+            GrabWSLink(req, res);
+        } else {
+            request("https://frontendapi.twitcasting.tv/users/" + req.query.channel + "/latest-movie", function (error, response, body) {
+                if (error){
+                  return res.status(400).send("NOT OK");
+                }
             
-            if (!body.movie.is_on_live){
-                return res.status(400).send("NOT LIVE");
-            } else {
-                req.query.link = body.movie.id;
-                DivergencePoint(req, res);        
-            }
-        });
+                try {
+                    body = JSON.parse(body);    
+                } catch (error) {
+                    return res.status(400).send("NOT OK");
+                }
+                
+                if (!body.movie.is_on_live){
+                    return res.status(400).send("NOT LIVE");
+                } else {
+                    req.query.link = body.movie.id;
+                    GrabWSLink(req, res);        
+                }
+            });
+        }
     } else {
         req.query.channel = req.query.link.split("/")[0];
         req.query.link = req.query.link.split("/")[1];
+        GrabWSLink(req, res);
+    }
+}
+
+function GrabWSLink(req, res){
+    const idx = SeekID(req.query.channel);
+    if (idx == -1){
+        var bodyFormData = new FormData();
+        bodyFormData.append("movie_id", req.query.link);
+
+        axios.post("https://twitcasting.tv/eventpubsuburl.php", bodyFormData, 
+        {        
+            headers: {
+                "Content-Type": "multipart/form-data; boundary=" + bodyFormData.getBoundary()
+            }
+        }
+        ).then(function (response) {
+            req.query.wss = response.data.url;
+            DivergencePoint(req, res);
+        }).catch(function (error) {
+            return res.status(400).send("POST NOT OK");
+        });
+    } else {
+        req.query.wss = ListenerPack[idx].WSlink;
         DivergencePoint(req, res);
     }
 }
 
 function DivergencePoint(req, res) {
-    var bodyFormData = new FormData();
-    bodyFormData.append("movie_id", req.query.link);
-    
-    axios.post("https://twitcasting.tv/eventpubsuburl.php", bodyFormData, 
-        {        
-            headers: {
-                "Authorization": "Basic dffdg",
-                "Content-Type": "multipart/form-data; boundary=" + bodyFormData.getBoundary()
-            }
-        }
-    ).then(function (response) {
-        res.status(200).send("OK");
-        const ws = new WebSocket(response.data.url);
-        ws.onopen = function (event) {
-			console.log("CONNECTED");
-		};
-        
-        ws.onclose = function (event) {
-            console.log("CLOSED");
-        };
-		
-		ws.onmessage = function (event) {
-            JSON.parse(event.data).forEach(e => {
-                switch (e.type) {
-                    case "gift":
-                        console.log({
-                            type: e.type,
-                            author: e.sender.name,
-                            screenName: e.sender.screenName,
-                            thumbnailURL: e.sender.profileImage,
-                            message: decodeURIComponent(e.message),
-                            item: e.item
-                        });
-                        break;
-                
-                    case "comment":
-                        /*
-                        console.log({
-                            type: e.type,
-                            author: e.author.name,
-                            screenName: e.author.screenName,
-                            thumbnailURL: e.author.profileImage,
-                            message: decodeURIComponent(e.message)
-                        });
-                        */
-                        break;
-                    
-                    default:
-                        console.log(e.type);
-                        break;
-                }
-            });
-		};
-    }).catch(function (error) {
-        console.log(error);
-        return res.status(400).send("POST NOT OK");
-    });
-
-
-    /*
     if (!req.query.TL){
-        AddListener(req, res);
+        return res.status(200).send(req.query.wss);
       } else {
         if (req.query.channel){
           if (ReservedChannel.indexOf(req.query.channel) != -1){
             AddListener(req, res);
           } else {
-            delete req.query.TL;
-            AddListener(req, res);
+            return res.status(200).send(req.query.wss);
           }      
         } else {
-          delete req.query.TL;
-          AddListener(req, res);
+            return res.status(200).send(req.query.wss);
         }
-    }
-    */
+    } 
 }
-
-//https://en.twitcasting.tv/kinnpatuhikaru/movie/700532969
