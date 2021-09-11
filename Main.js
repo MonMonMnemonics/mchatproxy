@@ -2,6 +2,7 @@ const YTHandler = require("./src/youtube");
 const TWHandler = require("./src/twitch");
 const TCHandler = require("./src/twitcast");
 const BLHandler = require("./src/bilibili");
+const INHandler = require("./src/17live");
 
 const axios = require('axios');
 const request = require('request');
@@ -67,13 +68,15 @@ app.get('/ChatProxy', async function (req, res) {
       case "NL_":
         res.status(400).send("Unable to handle this stream link");
         break;
-      case "NC_":
-        res.status(400).send("Unable to handle this stream link");
-        break;
       case "BL_":
         req.query.link = req.query.link.substring(3);
         req.query.channel = req.query.link;
         BLHandler.MainGate(req, res);
+        break;
+      case "IN_":
+        req.query.link = req.query.link.substring(3);
+        req.query.channel = req.query.link;
+        INHandler.MainGate(req, res);
         break;
       default:
         return res.status(400).send("Unable to handle this stream link");
@@ -106,13 +109,15 @@ app.get('/ChatProxy', async function (req, res) {
       case "NL_":
         res.status(400).send("Unable to handle this stream link");
         break;
-      case "NC_":
-        res.status(400).send("Unable to handle this stream link");
-        break;
       case "BL_":
         req.query.channel = req.query.channel.substring(3);
         req.query.link = req.query.channel;
         BLHandler.MainGate(req, res);
+        break;
+      case "IN_":
+        req.query.channel = req.query.channel.substring(3);
+        req.query.link = req.query.channel;
+        INHandler.MainGate(req, res);
         break;
       default:
         return res.status(400).send("Unable to handle this stream link");

@@ -18,6 +18,7 @@
     "node-html-parser": "^3.3.5",
     "puppeteer": "^10.2.0",
     "request": "^2.88.2",
-    "tmi.js": "^1.8.5"
+    "tmi.js": "^1.8.5",
+    "zlib": "^1.0.5"
   }
 }
