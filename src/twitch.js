@@ -311,7 +311,6 @@ exports.SendBucket = async function() {
             textlist = "auth_key=" + DeepLAPI.APIkey + "&" + textlist + "target_lang=JA";
 
             const TLres = await axios.post("https://api-free.deepl.com/v2/translate", textlist).catch(e => e.response)
-            console.log(TLres.status);
 
             if (TLres.status == 200){
                 let j = 0;
@@ -357,6 +356,7 @@ exports.Pinger = function() {
                 for(;ListenerPack[i].ConnList.length != 0;){
                     ListenerPack[i].ConnList[0].res.write("data: { \"flag\":\"timeout\", \"content\":\"Timeout\" }\n\n");
                     ListenerPack[i].ConnList[0].res.end();
+                    ListenerPack[i].TMIClient.disconnect();
                     ListenerPack[i].ConnList.splice(0, 1);
                     if (ListenerPack[i].ConnList.length == 0){
                         ListenerPack.splice(i, 1);
@@ -382,7 +382,7 @@ exports.MainGate = function (req, res) {
             AddListener(req, res);
           } else {
             return (res.status(400).send("Twitch only available for translation")); 
-          }      
+          } 
         } else {
           return (res.status(400).send("Twitch only available for translation"));
         }
