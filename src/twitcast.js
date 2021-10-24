@@ -97,7 +97,7 @@ async function AddListener(req, res){
         
                 Pack.MsgBucket.push({
                     author: e.author.name,
-                    image: e.profileImage,
+                    authorPhoto: e.profileImage,
                     grade: e.author.grade,
                     message: e.htmlMessage || e.message,
                     TL: TLContent
@@ -393,13 +393,11 @@ exports.MainGate = function (req, res) {
       } else {
         if (req.query.channel){
           AddListener(req, res);
-          /*
           if (ReservedChannel.indexOf(req.query.channel) != -1){
             AddListener(req, res);
           } else {
             return (res.status(400).send("NOT AVAILABLE FOR TRANSLATION")); 
           } 
-          */
         } else {
             GetWSSUrl(req, res);
         }
