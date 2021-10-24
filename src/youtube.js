@@ -177,6 +177,29 @@ Action item
 {"addLiveChatTickerItemAction":{"item":{"liveChatTickerSponsorItemRenderer":{"id":"ChwKGkNQYWxpLXZyLV9BQ0ZTZ0hyUVlkNmtRSnFR","detailText":{"runs":[{"text":"Member"}]},"detailTextColor":4294967295,"startBackgroundColor":4279213400,"endBackgroundColor":4278943811,"sponsorPhoto":{"thumbnails":[{"url":"https://yt4.ggpht.com/ytc/AAUvwnj0d1mdD_dUQs8p50ZoKmewLMCN4MUNu1y3zAjw=s32-c-k-c0x00ffffff-no-rj","width":32,"height":32},{"url":"https://yt4.ggpht.com/ytc/AAUvwnj0d1mdD_dUQs8p50ZoKmewLMCN4MUNu1y3zAjw=s64-c-k-c0x00ffffff-no-rj","width":64,"height":64}]},"durationSec":300,"showItemEndpoint":{"commandMetadata":{"webCommandMetadata":{"ignoreNavigation":true}},"showLiveChatItemEndpoint":{"renderer":{"liveChatMembershipItemRenderer":{"id":"ChwKGkNQYWxpLXZyLV9BQ0ZTZ0hyUVlkNmtRSnFR","timestampUsec":"1622736311406238","authorExternalChannelId":"UCkngng9eT6TOajGoOIaCF6w","headerSubtext":{"runs":[{"text":"Welcome to "},{"text":"フレアファン"},{"text":"!"}]},"authorName":{"simpleText":"13EqualsB"},"authorPhoto":{"thumbnails":[{"url":"https://yt4.ggpht.com/ytc/AAUvwnj0d1mdD_dUQs8p50ZoKmewLMCN4MUNu1y3zAjw=s32-c-k-c0x00ffffff-no-rj","width":32,"height":32},{"url":"https://yt4.ggpht.com/ytc/AAUvwnj0d1mdD_dUQs8p50ZoKmewLMCN4MUNu1y3zAjw=s64-c-k-c0x00ffffff-no-rj","width":64,"height":64}]},"authorBadges":[{"liveChatAuthorBadgeRenderer":{"customThumbnail":{"thumbnails":[{"url":"https://yt3.ggpht.com/ZJ1aBJMBh5LlzSAUMicgVE8g_bzhDCCuFoH44C8rdJmTck2HVPNtBstr81-tYmMjCq2oz6J4=s16-c-k"},{"url":"https://yt3.ggpht.com/ZJ1aBJMBh5LlzSAUMicgVE8g_bzhDCCuFoH44C8rdJmTck2HVPNtBstr81-tYmMjCq2oz6J4=s32-c-k"}]},"tooltip":"New member","accessibility":{"accessibilityData":{"label":"New member"}}}}],"contextMenuEndpoint":{"commandMetadata":{"webCommandMetadata":{"ignoreNavigation":true}},"liveChatItemContextMenuEndpoint":{"params":"Q2g0S0hBb2FRMUJoYkdrdGRuSXRYMEZEUmxOblNISlJXV1EyYTFGS2NWRWFLU29uQ2hoVlEzWkpibHA0T1dnemFrTXlTbnB6U1hwdlQyVmlWMmNTQzJkaVIyZHZPVlpYZVhWM0lBSW9CRElhQ2hoVlEydHVaMjVuT1dWVU5sUlBZV3BIYjA5SllVTkdObmMlM0Q="}},"contextMenuAccessibility":{"accessibilityData":{"label":"Comment actions"}}}}}},"authorExternalChannelId":"UCkngng9eT6TOajGoOIaCF6w","fullDurationSec":300}},"durationSec":"300"}}
 // SUPER CHAT
 {"clickTrackingParams":"CAEQl98BIhMI-J2Uh-z78AIVf9dMAh0kagVk","addLiveChatTickerItemAction":{"item":{"liveChatTickerPaidMessageItemRenderer":{"id":"ChwKGkNQYXB1X19yLV9BQ0ZlYzdyUVlkbzJvUGpn","amount":{"simpleText":"¥500"},"amountTextColor":4278190080,"startBackgroundColor":4280150454,"endBackgroundColor":4278239141,"authorPhoto":{"thumbnails":[{"url":"https://yt4.ggpht.com/ytc/AAUvwnj1rOw_UmTWa-M023m0i9lq6lx_4cgFvTRBb6Dz=s32-c-k-c0x00ffffff-no-rj","width":32,"height":32},{"url":"https://yt4.ggpht.com/ytc/AAUvwnj1rOw_UmTWa-M023m0i9lq6lx_4cgFvTRBb6Dz=s64-c-k-c0x00ffffff-no-rj","width":64,"height":64}],"accessibility":{"accessibilityData":{"label":"Pawel Szymczykowski"}}},"durationSec":120,"showItemEndpoint":{"clickTrackingParams":"CAIQsMgEIhMI-J2Uh-z78AIVf9dMAh0kagVk","commandMetadata":{"webCommandMetadata":{"ignoreNavigation":true}},"showLiveChatItemEndpoint":{"renderer":{"liveChatPaidMessageRenderer":{"id":"ChwKGkNQYXB1X19yLV9BQ0ZlYzdyUVlkbzJvUGpn","timestampUsec":"1622736368306182","authorName":{"simpleText":"Pawel Szymczykowski"},"authorPhoto":{"thumbnails":[{"url":"https://yt4.ggpht.com/ytc/AAUvwnj1rOw_UmTWa-M023m0i9lq6lx_4cgFvTRBb6Dz=s32-c-k-c0x00ffffff-no-rj","width":32,"height":32},{"url":"https://yt4.ggpht.com/ytc/AAUvwnj1rOw_UmTWa-M023m0i9lq6lx_4cgFvTRBb6Dz=s64-c-k-c0x00ffffff-no-rj","width":64,"height":64}]},"purchaseAmountText":{"simpleText":"¥500"},"message":{"runs":[{"text":"Only your railgun"}]},"headerBackgroundColor":4278239141,"headerTextColor":4278190080,"bodyBackgroundColor":4280150454,"bodyTextColor":4278190080,"authorExternalChannelId":"UCQf6i13evZ9tDp8uLvfqhUQ","authorNameTextColor":2315255808,"contextMenuEndpoint":{"clickTrackingParams":"CAQQ7rsEIhMI-J2Uh-z78AIVf9dMAh0kagVk","commandMetadata":{"webCommandMetadata":{"ignoreNavigation":true}},"liveChatItemContextMenuEndpoint":{"params":"Q2g0S0hBb2FRMUJoY0hWZlgzSXRYMEZEUm1Wak4zSlJXV1J2TW05UWFtY2FLU29uQ2hoVlEzWkpibHA0T1dnemFrTXlTbnB6U1hwdlQyVmlWMmNTQzJkaVIyZHZPVlpYZVhWM0lBSW9CRElhQ2hoVlExRm1ObWt4TTJWMldqbDBSSEE0ZFV4MlpuRm9WVkUlM0Q="}},"timestampColor":2147483648,"contextMenuAccessibility":{"accessibilityData":{"label":"Comment actions"}},"trackingParams":"CAQQ7rsEIhMI-J2Uh-z78AIVf9dMAh0kagVk"}},"trackingParams":"CAMQjtEGIhMI-J2Uh-z78AIVf9dMAh0kagVk"}},"authorExternalChannelId":"UCQf6i13evZ9tDp8uLvfqhUQ","fullDurationSec":120,"trackingParams":"CAIQsMgEIhMI-J2Uh-z78AIVf9dMAh0kagVk"}},"durationSec":"120"}}
+
+//MEMBER HIGHLIGHT
+{
+  liveChatMembershipItemRenderer: {
+    id: 'Ci8KLUNLRzB1N2lRM2ZNQ0ZRd25zd0FkYzVVUDdRLUxveU1lc0lELTMyNzAxNDQyNg%3D%3D',
+    timestampUsec: '1635072131259822',
+    authorExternalChannelId: 'UCa7VJEUryafSdZOyvy2FWYw',
+    headerPrimaryText: { runs: [Array] },
+    headerSubtext: { simpleText: 'るしあのお茶会ふぁみーゆ' },
+    message: { runs: [Array] },
+    authorName: { simpleText: '雪風' },
+    authorPhoto: { thumbnails: [Array] },
+    authorBadges: [ [Object] ],
+    contextMenuEndpoint: {
+      clickTrackingParams: 'CAYQ4f0GIhMIhJ6Oru7i8wIViiVYCh0XdwI9',
+      commandMetadata: [Object],
+      liveChatItemContextMenuEndpoint: [Object]
+    },
+    contextMenuAccessibility: { accessibilityData: [Object] },
+    trackingParams: 'CAYQ4f0GIhMIhJ6Oru7i8wIViiVYCh0XdwI9'
+  }
+}
+
 */
 
 const axios = require('axios');
@@ -365,15 +388,27 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
           //------------------------------------------ MEMBER MESSAGE ------------------------------------------
           var MessageContent = [];
           if (item.liveChatMembershipItemRenderer.headerSubtext){
-            MessageContent = item.liveChatMembershipItemRenderer.headerSubtext.runs.map(dt => {
-              if ("text" in dt){
-                return (dt.text);
-              } else if ("emoji" in dt) {
-                if (dt.emoji.image.thumbnails){
-                  return (dt.emoji.image.thumbnails[dt.emoji.image.thumbnails.length - 1].url);
+            if (item.liveChatMembershipItemRenderer.message.runs) {
+              MessageContent = item.liveChatMembershipItemRenderer.message.runs.map(dt => {
+                if ("text" in dt){
+                  return (dt.text);
+                } else if ("emoji" in dt) {
+                  if (dt.emoji.image.thumbnails){
+                    return (dt.emoji.image.thumbnails[dt.emoji.image.thumbnails.length - 1].url);
+                  }
                 }
-              }
-            });
+              });
+            } else if (item.liveChatMembershipItemRenderer.headerSubtext.runs) {
+              MessageContent = item.liveChatMembershipItemRenderer.headerSubtext.runs.map(dt => {
+                if ("text" in dt){
+                  return (dt.text);
+                } else if ("emoji" in dt) {
+                  if (dt.emoji.image.thumbnails){
+                    return (dt.emoji.image.thumbnails[dt.emoji.image.thumbnails.length - 1].url);
+                  }
+                }
+              });
+            }
           }
 
           MsgChunk.push({
@@ -625,6 +660,7 @@ async function AddListener(req, res){
   res.writeHead(200, Constants.Contheaders);
   res.flushHeaders();
   res.write("data: { \"flag\":\"Connect\", \"content\":\"CONNECTED TO SERVER\"}\n\n");
+  res.flush();
 
   var indextarget = SeekID(vidID);
   if (indextarget != -1){
@@ -701,13 +737,19 @@ async function AddListener(req, res){
 
 function broadcastTL(idx, data){
     if (ListenerPack[idx]){
-        ListenerPack[idx].ConnList.filter(c => c.TL == true).forEach(c => c.res.write("data:" + data + "\n\n"));
+        ListenerPack[idx].ConnList.filter(c => c.TL == true).forEach(c => {
+          c.res.write("data:" + data + "\n\n");
+          c.res.flush();
+        });
     }    
 }
 
 function broadcastNormal(idx, data){
     if (ListenerPack[idx]){
-        ListenerPack[idx].ConnList.filter(c => c.TL != true).forEach(c => c.res.write("data:" + data + "\n\n"));
+        ListenerPack[idx].ConnList.filter(c => c.TL != true).forEach(c => {
+          c.res.write("data:" + data + "\n\n");
+          c.res.flush();
+        });
     }    
 }
 

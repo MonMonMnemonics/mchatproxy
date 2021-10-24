@@ -17,8 +17,8 @@ const PORT = process.env.PORT || 31023
 const app = express()
 app.use(bodyParser.json( { limit: '20mb'} ))
 app.use(bodyParser.urlencoded({ extended: true, limit: '20mb' }))
-app.use(cors(corsOptions));
-//app.use(cors());
+//app.use(cors(corsOptions));
+app.use(cors());
 app.use(compression());
 
 const head = {'user-agent': 'Mozilla5.0 (Windows NT 10.0; Win64; x64) AppleWebKit537.36 (KHTML, like Gecko) Chrome75.0.3770.142 Safari537.36'}    

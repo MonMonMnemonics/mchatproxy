@@ -60,6 +60,7 @@ async function AddListener(req, res){
   res.writeHead(200, Constants.Contheaders);
   res.flushHeaders();
   res.write("data: { \"flag\":\"Connect\", \"content\":\"CONNECTED TO SERVER\"}\n\n");
+  res.flush();
 
   var indextarget = SeekID(vidID);
   if (indextarget != -1){
@@ -68,7 +69,6 @@ async function AddListener(req, res){
           ListenerPack[indextarget].TL = true;
       }
   } else {
-
     const client = new tmi.Client({
         connection: {
             reconnect: true,
@@ -146,13 +146,19 @@ async function AddListener(req, res){
 
 function broadcastTL(idx, data){
     if (ListenerPack[idx]){
-        ListenerPack[idx].ConnList.filter(c => c.TL == true).forEach(c => c.res.write("data:" + data + "\n\n"));
+        ListenerPack[idx].ConnList.filter(c => c.TL == true).forEach(c => {
+            c.res.write("data:" + data + "\n\n");
+            c.res.flush();
+        });
     }    
 }
 
 function broadcastNormal(idx, data){
     if (ListenerPack[idx]){
-        ListenerPack[idx].ConnList.filter(c => c.TL != true).forEach(c => c.res.write("data:" + data + "\n\n"));
+        ListenerPack[idx].ConnList.filter(c => c.TL != true).forEach(c => {
+            c.res.write("data:" + data + "\n\n");
+            c.res.flush();
+        });
     }    
 }
 
@@ -325,17 +331,26 @@ exports.SendBucket = async function() {
                     }        
                 }
 
-                e.ConnList.forEach(c => c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n"));
+                e.ConnList.forEach(c => {
+                    c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n");
+                    c.res.flush();
+                });
             } else {
                 for(let i = 0; i < MsgChunk.length; i++){
                     if (MsgChunk[i].TL){
                         delete MsgChunk[i].TL;
                     }
                 }
-                e.ConnList.forEach(c => c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n"));
+                e.ConnList.forEach(c => {
+                    c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n");
+                    c.res.flush();
+                });
             }  
         } else {
-            e.ConnList.forEach(c => c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n"));
+            e.ConnList.forEach(c => {
+                c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n");
+                c.res.flush();
+            });
         }    
     });
 }
@@ -382,7 +397,7 @@ exports.MainGate = function (req, res) {
             AddListener(req, res);
           } else {
             return (res.status(400).send("Twitch only available for translation")); 
-          } 
+          }
         } else {
           return (res.status(400).send("Twitch only available for translation"));
         }
