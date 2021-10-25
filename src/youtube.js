@@ -229,26 +229,34 @@ function KeySeeker(KeyName, JSONStr){
 
 //-----------------------------------------  YTC SKIMMER  -----------------------------------------
 async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
-    var idx = SeekID(vidID);
-    if (idx == -1){
-        return;
-    }
+  var idx = SeekID(vidID);
+  if (idx == -1){
+    return;
+  }
 
-    //  START FETCHING LIVE CHAT
-    const res = await axios.post("https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?key=" + Key,
-    {
-      "context": {
-        "client": {
-          "visitorData": VisDt,
-          "userAgent": head['user-agent'],
-          "clientName": "WEB",
-          "clientVersion": CVer,
-        },
+  //  START FETCHING LIVE CHAT
+  const res = await axios.post("https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?key=" + Key,
+  {
+    "context": {
+      "client": {
+        "visitorData": VisDt,
+        "userAgent": head['user-agent'],
+        "clientName": "WEB",
+        "clientVersion": CVer,
       },
-      "continuation": ContTkn,
     },
-    { headers : head}
-  ).catch(e => e.response)
+    "continuation": ContTkn,
+  },
+  { 
+    headers : head,
+    timeout: 5000
+  }
+  ).catch(e => {
+    if (e.code == "ECONNABORTED") {
+      StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount+1, vidID);
+      return;
+    }        
+  });
 
   if (!res){
     if (TrialCount == 3){

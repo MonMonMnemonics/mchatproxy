@@ -98,7 +98,7 @@ async function AddListener(req, res){
         
                 Pack.MsgBucket.push({
                     author: e.author.name,
-                    authorPhoto: e.profileImage,
+                    authorPhoto: e.author.profileImage,
                     grade: e.author.grade,
                     message: e.htmlMessage || e.message,
                     TL: TLContent
