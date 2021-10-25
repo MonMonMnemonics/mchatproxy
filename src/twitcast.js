@@ -311,6 +311,7 @@ exports.SendBucket = async function() {
             textlist = "auth_key=" + DeepLAPI.APIkey + "&" + textlist + "target_lang=JA";
 
             const TLres = await axios.post("https://api-free.deepl.com/v2/translate", textlist).catch(e => e.response)
+            console.log(TLres.status + " TC");
 
             if (TLres.status == 200){
                 let j = 0;

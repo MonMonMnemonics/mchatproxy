@@ -388,7 +388,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
           //------------------------------------------ MEMBER MESSAGE ------------------------------------------
           var MessageContent = [];
           if (item.liveChatMembershipItemRenderer.headerSubtext){
-            if (item.liveChatMembershipItemRenderer.message.runs) {
+            if (item.liveChatMembershipItemRenderer.message) {
               MessageContent = item.liveChatMembershipItemRenderer.message.runs.map(dt => {
                 if ("text" in dt){
                   return (dt.text);
@@ -550,7 +550,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
         textlist = "auth_key=" + DeepLAPI.APIkey + "&" + textlist + "target_lang=JA";
 
         const TLres = await axios.post("https://api-free.deepl.com/v2/translate", textlist).catch(e => e.response)
-        console.log(TLres.status);
+        console.log(TLres.status + " YT");
 
         if (TLres.status == 200){
             let j = 0;
@@ -843,7 +843,7 @@ exports.MainGate = async function (req, res) {
       } else {
         delete req.query.TL;
         AddListener(req, res);
-      }      
+      }    
     } else {
       delete req.query.TL;
       AddListener(req, res);

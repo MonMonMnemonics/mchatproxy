@@ -114,7 +114,6 @@ async function AddListener(req, res){
             })
         }
         */
-
         Pack.MsgBucket.push({
             author: tags["display-name"],
             badges: tags.badges,
@@ -317,6 +316,7 @@ exports.SendBucket = async function() {
             textlist = "auth_key=" + DeepLAPI.APIkey + "&" + textlist + "target_lang=JA";
 
             const TLres = await axios.post("https://api-free.deepl.com/v2/translate", textlist).catch(e => e.response)
+            console.log(TLres.status + " TW");
 
             if (TLres.status == 200){
                 let j = 0;
@@ -351,7 +351,7 @@ exports.SendBucket = async function() {
                 c.res.write("data:" + JSON.stringify(MsgChunk) + "\n\n");
                 c.res.flush();
             });
-        }    
+        }
     });
 }
 
