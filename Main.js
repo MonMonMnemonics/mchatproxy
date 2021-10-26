@@ -127,6 +127,18 @@ app.get('/ChatProxy', async function (req, res) {
   }
 })
 
+app.get('/AuxData', async function (req, res)  {
+  if (!req.query.ChannelID) {
+    return res.status(400).send("NO CHANNEL ID");
+  }
+
+  if (req.query.ChannelID.slice(0,2) != "TW") {
+    return res.status(400).send("ONLY WORKS FOR TWITCH");
+  }
+
+  TWHandler.AuxInfo(req, res);
+});
+
 app.get('/ChannelLive', async function (req,res) {
   if (!req.query.ChannelID) {
     return res.status(400).send("NO CHANNEL ID");

@@ -2,6 +2,7 @@ const DeepLAPI = require("../DeepL.json");
 const tmi = require('tmi.js');
 const Constants = require("./Constants.json");
 const axios = require('axios');
+const puppeteer = require('puppeteer');
 
 const ReservedChannel = [
 ];
@@ -402,4 +403,24 @@ exports.MainGate = function (req, res) {
           return (res.status(400).send("Twitch only available for translation"));
         }
     } 
+}
+
+exports.AuxInfo = function (req, res) {
+    const KeySearch = "https://panels-images.twitch.tv/panel-";
+    (async () => {
+        const browser = await puppeteer.launch({ headless: false, args: ['--no-sandbox'] });
+        const page = await browser.newPage();
+        await page.goto('https://www.twitch.tv/' + req.query.ChannelID.slice(3) + "/about");
+        const content = await page.content(KeySearch);
+        await browser.close();
+        const found = content.indexOf(KeySearch);
+        if (found == -1){
+            return res.status(400).send("NOT OK");
+        } else {
+            const cut2 = content.indexOf("-", found + KeySearch.length);
+            return res.status(200).send({
+                ChannelID: content.slice(found + KeySearch.length, cut2)
+            })
+        }
+    })();    
 }
