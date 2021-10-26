@@ -414,6 +414,7 @@ exports.AuxInfo = function (req, res) {
         const content = await page.content(KeySearch);
         await browser.close();
         const found = content.indexOf(KeySearch);
+        console.log("CHANNEL ID SEARCH " + found);
         if (found == -1){
             return res.status(400).send("NOT OK");
         } else {
