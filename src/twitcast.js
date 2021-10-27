@@ -389,7 +389,7 @@ async function GetWSSUrl(req, res) {
     const vidID = req.query.link;
     const ChannelName = req.query.link;
     var res2 = await axios.get("https://twitcasting.tv/streamserver.php?target=" + ChannelName.toString() + "&mode=client", { headers : head});
-    if (!res2.data.movie.live){
+    if (!res2.data.movie){
       return res.status(400).send("NOT LIVE");
     }
   

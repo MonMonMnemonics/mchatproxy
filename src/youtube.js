@@ -429,7 +429,7 @@ async function StartYTCPoll(Key, ContTkn, VisDt, CVer, TrialCount, vidID){
           //------------------------------------------ PAID STICKER MESSAGE ------------------------------------------
           MsgChunk.push({
             author: item.liveChatPaidStickerRenderer.authorName.simpleText,
-            authorPhoto: item.liveChatPaidStickerRenderer.authorPhoto.thumbnails[item.liveChatPaidMessageRenderer.authorPhoto.thumbnails.length - 1].url,
+            authorPhoto: item.liveChatPaidStickerRenderer.authorPhoto.thumbnails[item.liveChatPaidStickerRenderer.authorPhoto.thumbnails.length - 1].url,
             type: "DS",
             SC: item.liveChatPaidStickerRenderer.purchaseAmountText.simpleText,
             content: ["https:" + item.liveChatPaidStickerRenderer.sticker.thumbnails[item.liveChatPaidStickerRenderer.sticker.thumbnails.length - 1].url],
