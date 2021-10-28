@@ -409,11 +409,12 @@ exports.MainGate = function (req, res) {
         GetWSSUrl(req, res);
       } else {
         if (req.query.channel){
-          if (ReservedChannel.indexOf(req.query.channel) != -1){
-            AddListener(req, res);
-          } else {
-            return (res.status(400).send("NOT AVAILABLE FOR TRANSLATION")); 
-          } 
+            //AddListener(req, res);
+            if (ReservedChannel.indexOf(req.query.channel) != -1){
+                AddListener(req, res);
+            } else {
+                return (res.status(400).send("NOT AVAILABLE FOR TRANSLATION")); 
+            } 
         } else {
             GetWSSUrl(req, res);
         }

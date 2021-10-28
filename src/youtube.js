@@ -846,12 +846,13 @@ exports.MainGate = async function (req, res) {
     AddListener(req, res);
   } else {
     if (req.query.channel){
+      //AddListener(req, res);
       if (ReservedChannel.indexOf(req.query.channel) != -1){
         AddListener(req, res);
       } else {
         delete req.query.TL;
         AddListener(req, res);
-      }    
+      } 
     } else {
       delete req.query.TL;
       AddListener(req, res);

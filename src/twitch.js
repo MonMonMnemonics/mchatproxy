@@ -394,11 +394,12 @@ exports.MainGate = function (req, res) {
         return (res.status(400).send("Twitch only available for translation"));
       } else {
         if (req.query.channel){
-          if (ReservedChannel.indexOf(req.query.channel) != -1){
-            AddListener(req, res);
-          } else {
-            return (res.status(400).send("Twitch only available for translation")); 
-          }
+            //AddListener(req, res);
+            if (ReservedChannel.indexOf(req.query.channel) != -1){
+                AddListener(req, res);
+            } else {
+                return (res.status(400).send("Twitch only available for translation")); 
+            }
         } else {
           return (res.status(400).send("Twitch only available for translation"));
         }
