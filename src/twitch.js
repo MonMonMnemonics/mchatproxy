@@ -408,7 +408,7 @@ exports.MainGate = function (req, res) {
 exports.AuxInfo = function (req, res) {
     const KeySearch = "https://panels-images.twitch.tv/panel-";
     (async () => {
-        const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+        const browser = await puppeteer.launch({ headless: false, args: ['--no-sandbox'] });
         const page = await browser.newPage();
         await page.goto('https://www.twitch.tv/' + req.query.ChannelID.slice(3) + "/about");
         const content = await page.content(KeySearch);
