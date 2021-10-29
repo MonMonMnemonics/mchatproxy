@@ -205,16 +205,10 @@ Action item
 const axios = require('axios');
 const DeepLAPI = require("../DeepL.json");
 const Constants = require("./Constants.json");
+const ChannelJson = require('../ReservedChannel.json');
+const ReservedChannel =  ChannelJson.YT;
 
 const head = {'user-agent': 'Mozilla5.0 (Windows NT 10.0; Win64; x64) AppleWebKit537.36 (KHTML, like Gecko) Chrome75.0.3770.142 Safari537.36'}    
-
-const ReservedChannel = [
-    'UCxvlgkpP5z98LsRudHN_Ucg', //  NEKOBOSHI MINTO
-    'UCDqI2jOz0weumE8s7paEk6g', //  ROBOCO
-    'UCp-5t9SrOQwXMU7iIjQfARg', //  OOKAMI MIO
-    'UCp6993wxpyDPHUpavwDFqgg', //  TOKINO SORA
-    'UCFTLzh12_nrtzqBPsTCqenA'  //  AKI ROSENTHAL
-];
 
 function KeySeeker(KeyName, JSONStr){
   Keyidx = JSONStr.indexOf(KeyName);

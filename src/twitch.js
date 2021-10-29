@@ -3,9 +3,8 @@ const tmi = require('tmi.js');
 const Constants = require("./Constants.json");
 const axios = require('axios');
 const puppeteer = require('puppeteer');
-
-const ReservedChannel = [
-];
+const ChannelJson = require('../ReservedChannel.json');
+const ReservedChannel =  ChannelJson.TW;
 
 //-------------------------------------------------------- LISTENER HANDLER --------------------------------------------------------
 var ListenerPack = [];

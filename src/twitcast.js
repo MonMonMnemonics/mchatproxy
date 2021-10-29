@@ -2,11 +2,10 @@ const WebSocket = require('ws');
 const axios = require('axios');
 const DeepLAPI = require("../DeepL.json");
 const Constants = require("./Constants.json");
+const ChannelJson = require('../ReservedChannel.json');
+const ReservedChannel =  ChannelJson.TC;
 
 const head = {'user-agent': 'Mozilla5.0 (Windows NT 10.0; Win64; x64) AppleWebKit537.36 (KHTML, like Gecko) Chrome75.0.3770.142 Safari537.36'}    
-
-const ReservedChannel = [
-];
 
 //-------------------------------------------------------- LISTENER HANDLER --------------------------------------------------------
 var ListenerPack = [];
