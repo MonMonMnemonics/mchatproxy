@@ -30,6 +30,7 @@ var corsOptions = {
 
 //-----------------------------------------  SERVER HANDLER  -----------------------------------------
 app.get('/ChatProxy', async function (req, res) {
+  console.log(req.query);
   if (req.query.link) {
     switch(req.query.link.substring(0,3)){
       case "YT_":
