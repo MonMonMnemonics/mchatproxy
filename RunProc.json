@@ -7,7 +7,7 @@
       }
     },
       {
-        "name"        : "Xvfb",
+        "name"        : "Xvfb1",
         "interpreter" : "none",
         "script"      : "Xvfb",
         "args"        : ":99"
